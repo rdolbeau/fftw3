@@ -98,7 +98,7 @@ extern void X(extract_reim)(int sign, R *c, R **r, R **i);
 
 /* define HAVE_SIMD if any simd extensions are supported */
 #if defined(HAVE_SSE) || defined(HAVE_SSE2) || defined(HAVE_ALTIVEC) || \
-     defined(HAVE_MIPS_PS) || defined(HAVE_AVX)
+     defined(HAVE_MIPS_PS) || defined(HAVE_AVX) || defined(HAVE_KCVI)
 #define HAVE_SIMD 1
 #else
 #define HAVE_SIMD 0
@@ -123,6 +123,8 @@ typedef struct scanner_s scanner;
 #  ifdef HAVE_AVX
 #    define MIN_ALIGNMENT 32  /* best alignment for AVX, conservative for
 			       * everything else */
+#  elif defined(HAVE_KCVI)
+#    define MIN_ALIGNMENT 64
 #  else
      /* Note that we cannot use 32-byte alignment for all SIMD.  For
 	example, MacOS X malloc is 16-byte aligned, but there was no
