@@ -98,7 +98,7 @@ extern void X(extract_reim)(int sign, R *c, R **r, R **i);
 
 /* define HAVE_SIMD if any simd extensions are supported */
 #if defined(HAVE_SSE) || defined(HAVE_SSE2) || defined(HAVE_ALTIVEC) || \
-     defined(HAVE_MIPS_PS) || defined(HAVE_AVX) || defined(HAVE_KCVI)
+     defined(HAVE_MIPS_PS) || defined(HAVE_AVX) || defined(HAVE_AVX2) || defined(HAVE_KCVI)
 #define HAVE_SIMD 1
 #else
 #define HAVE_SIMD 0
@@ -106,6 +106,7 @@ extern void X(extract_reim)(int sign, R *c, R **r, R **i);
 
 extern int X(have_simd_sse2)(void);
 extern int X(have_simd_avx)(void);
+extern int X(have_simd_avx2)(void);
 extern int X(have_simd_altivec)(void);
 extern int X(have_simd_neon)(void);
 
@@ -120,7 +121,7 @@ typedef struct scanner_s scanner;
 /*-----------------------------------------------------------------------*/
 /* alloca: */
 #if HAVE_SIMD
-#  ifdef HAVE_AVX
+#  if defined(HAVE_AVX) || defined(HAVE_AVX2)
 #    define MIN_ALIGNMENT 32  /* best alignment for AVX, conservative for
 			       * everything else */
 #  elif defined(HAVE_KCVI)
