@@ -19,43 +19,44 @@
  */
 
 
-#include "api.h"
-
-const char X(cc)[] = FFTW_CC;
-
-/* fftw <= 3.2.2 had special compiler flags for codelets, which are
-   not used anymore.  We keep this variable around because it is part
-   of the ABI */
-const char X(codelet_optim)[] = "";
-
-const char X(version)[] = PACKAGE "-" PACKAGE_VERSION
-
-#if HAVE_FMA
-   "-fma"
-#endif
-
-#if HAVE_SSE2
-   "-sse2"
-#endif
-
-#if HAVE_AVX
-   "-avx"
-#endif
+#include "ifftw.h"
 
 #if HAVE_AVX2
-   "-avx2"
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+
+#include "amd64-cpuid.h"
+
+int X(have_simd_avx2)(void)
+{
+       static int init = 0, res;
+
+       if (!init) {
+	    res = 1 
+		 && ((cpuid_ecx(1) & 0x18000000) == 0x18000000)
+		 && ((xgetbv_eax(0) & 0x6) == 0x6);
+	    init = 1;
+       }
+       return res;
+}
+
+#else /* 32-bit code */
+
+#include "x86-cpuid.h"
+
+int X(have_simd_avx2)(void) /* fixme */
+{
+       static int init = 0, res;
+
+       if (!init) {
+	    res =   !is_386() 
+		 && has_cpuid()
+		 && ((cpuid_ecx(1) & 0x18000000) == 0x18000000)
+		 && ((xgetbv_eax(0) & 0x6) == 0x6);
+	    init = 1;
+       }
+       return res;
+}
 #endif
 
-#if HAVE_KCVI
-   "-kcvi"
 #endif
-
-#if HAVE_ALTIVEC
-   "-altivec"
-#endif
-
-#if HAVE_NEON
-   "-neon"
-#endif
-
-;
