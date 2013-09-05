@@ -37,7 +37,7 @@
 #elif defined(HAVE_NEON)
 #  define ALIGNMENT 8     /* Alignment for the LD/ST macros */
 #  define ALIGNMENTA 8    /* Alignment for the LDA/STA macros */
-#elif defined(HAVE_KCVI)
+#elif defined(HAVE_KCVI) || defined(HAVE_AVX512)
 #  if defined(FFTW_SINGLE)
 #    define ALIGNMENT 8     /* Alignment for the LD/ST macros */
 #  else
