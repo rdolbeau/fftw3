@@ -27,7 +27,7 @@
 
 #include "amd64-cpuid.h"
 
-int X(have_simd_avx2)(void)
+int X(have_simd_avx2)(void) /* fixme: still testing for normal AVX */
 {
        static int init = 0, res;
 
@@ -44,7 +44,7 @@ int X(have_simd_avx2)(void)
 
 #include "x86-cpuid.h"
 
-int X(have_simd_avx2)(void) /* fixme */
+int X(have_simd_avx2)(void) /* fixme: still testing for normal AVX */
 {
        static int init = 0, res;
 
