@@ -308,7 +308,7 @@ case "${ax_cv_c_compiler_vendor}" in
 		[AC_MSG_ERROR([Need a version of gcc with -mavx2])])
 	fi
 	if test "$have_avx2" = "yes"; then
-	    AX_CHECK_COMPILER_FLAGS(-mfma, [AVX2_CFLAGS="-mfma"],
+	    AX_CHECK_COMPILER_FLAGS(-mfma, [AVX2_CFLAGS="$AVX2_CFLAGS -mfma"],
 		[AC_MSG_WARN([Need a version of gcc with -mfma (harmless for icc)])])
 	fi
 
