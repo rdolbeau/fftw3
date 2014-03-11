@@ -31,11 +31,13 @@
 
 #include "amd64-cpuid.h"
 
-int X(have_simd_avx512)(void) /* fixme: not testing anything */
+int X(have_simd_avx512)(void)
 {
        static int init = 0, res;
        if (!init) {
-         res = 1;
+            res = 1
+                 && ((cpuid_ebx(7) & 0x00010000) == 0x00010000)
+                 && ((xgetbv_eax(0) & 0x6) == 0x6);
          init = 1;
        }
        return res;
