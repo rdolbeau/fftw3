@@ -316,12 +316,6 @@ case "${ax_cv_c_compiler_vendor}" in
 	if test "$have_avx512" = "yes" -a "x$AVX512_CFLAGS" = x; then
 	    AX_CHECK_COMPILER_FLAGS(-mavx512f, [AVX512_CFLAGS="-mavx512f"],
 		[AC_MSG_ERROR([Need a version of gcc with -mavx512f])])
-	    AX_CHECK_COMPILER_FLAGS(-mavx512er, [AVX512_CFLAGS="-mavx512er"],
-		[AC_MSG_ERROR([Need a version of gcc with -mavx512er])])
-	    AX_CHECK_COMPILER_FLAGS(-mavx512cd, [AVX512_CFLAGS="-mavx512cd"],
-		[AC_MSG_ERROR([Need a version of gcc with -mavx512cd])])
-	    AX_CHECK_COMPILER_FLAGS(-mavx512pf, [AVX512_CFLAGS="-mavx512pf"],
-		[AC_MSG_ERROR([Need a version of gcc with -mavx512pf])])
 	fi
 
 	# KCVI
