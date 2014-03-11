@@ -6,3 +6,5 @@ For the common case of using the newer FMA (Fused Multiply Add) instructions in 
 
 Example:
 ./configure --prefix=/usr/local/fftw3-avx2-bin --enable-shared --enable-sse2 --enable-avx --enable-avx2 --enable-fma --enable-maintainer-mode
+
+Some benchmark results are at <http://www.dolbeau.name/dolbeau/fftw3/fftw3.html>
