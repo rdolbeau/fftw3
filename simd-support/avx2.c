@@ -27,13 +27,13 @@
 
 #include "amd64-cpuid.h"
 
-int X(have_simd_avx2)(void) /* fixme: still testing for normal AVX */
+int X(have_simd_avx2)(void)
 {
        static int init = 0, res;
 
        if (!init) {
 	    res = 1 
-		 && ((cpuid_ecx(1) & 0x18000000) == 0x18000000)
+		 && ((cpuid_ecx(1) & 0x18001000) == 0x18001000)
 		 && ((xgetbv_eax(0) & 0x6) == 0x6);
 	    init = 1;
        }
@@ -44,14 +44,14 @@ int X(have_simd_avx2)(void) /* fixme: still testing for normal AVX */
 
 #include "x86-cpuid.h"
 
-int X(have_simd_avx2)(void) /* fixme: still testing for normal AVX */
+int X(have_simd_avx2)(void)
 {
        static int init = 0, res;
 
        if (!init) {
 	    res =   !is_386() 
 		 && has_cpuid()
-		 && ((cpuid_ecx(1) & 0x18000000) == 0x18000000)
+		 && ((cpuid_ecx(1) & 0x18001000) == 0x18001000)
 		 && ((xgetbv_eax(0) & 0x6) == 0x6);
 	    init = 1;
        }
