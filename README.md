@@ -50,3 +50,7 @@ That's because the emulated instructions are slow, and the 'patient' planner ign
       (fftw_codelet_t3fv_32_avx512 0 #x31bff #x31bff #x0 #x9208a52b #x2d2ad097 #x6067ffe4 #xcda7baf8)
     )
 
+## aarch64 (64 bits ARM)
+
+Just add '--enable-neon' to the build, using either single or double precision. *Beware*: double precision support has only been minimally tested with Qemu.
+
