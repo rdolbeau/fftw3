@@ -2,6 +2,7 @@
  * Copyright (c) 2003, 2007-11 Matteo Frigo
  * Copyright (c) 2003, 2007-11 Massachusetts Institute of Technology
  * Copyright (c) 2012-2013 Romain Dolbeau
+ * Romain Dolbeau hereby places this code in the public domain.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
