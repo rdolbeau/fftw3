@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2003, 2007-14 Matteo Frigo
  * Copyright (c) 2003, 2007-14 Massachusetts Institute of Technology
+ * Double-precision support added by Romain Dolbeau.
+ * Romain Dolbeau hereby places his modifications in the public domain.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
