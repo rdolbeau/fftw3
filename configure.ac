@@ -183,6 +183,11 @@ if test "$have_neon" = "yes"; then
 fi
 AM_CONDITIONAL(HAVE_NEON, test "$have_neon" = "yes")
 
+AC_ARG_ENABLE(armv8cyclecounter, [AC_HELP_STRING([--enable-armv8cyclecounter],[enable the cycle counter on ARMv8 ; require enabling in kernel mode, see <https://github.com/rdolbeau/enable_arm_pmu>])], have_armv8cyclecounter=$enableval)
+if test "$have_armv8cyclecounter"x = "yes"x; then
+	AC_DEFINE(HAVE_ARMV8CC,1,[Define if you have enabled the cycle counter on ARMv8])
+fi
+
 dnl FIXME:
 dnl AC_ARG_ENABLE(mips-ps, [AC_HELP_STRING([--enable-mips-ps],[enable MIPS pair-single optimizations])], have_mips_ps=$enableval, have_mips_ps=no)
 dnl if test "$have_mips_ps" = "yes"; then
