@@ -515,3 +515,14 @@ INLINE_ELAPSED(inline)
 #endif
 #endif /* HAVE_MIPS_ZBUS_TIMER */
 
+#if defined(__aarch64__) && defined(HAVE_ARMV8CC)
+typedef uint64_t ticks;
+static inline ticks getticks(void)
+{
+        uint64_t cc = 0;
+        asm volatile("mrs %0, PMCCNTR_EL0" : "=r"(cc));
+        return cc;
+}
+INLINE_ELAPSED(inline)
+#define HAVE_TICK_COUNTER
+#endif
