@@ -188,6 +188,15 @@ if test "$have_armv8cyclecounter"x = "yes"x; then
 	AC_DEFINE(HAVE_ARMV8CC,1,[Define if you have enabled the cycle counter on ARMv8])
 fi
 
+AC_ARG_ENABLE(generic128d, [AC_HELP_STRING([--enable-generic128d],[enable GENERIC128D optimizations])], have_generic128d=$enableval, have_generic128d=no)
+if test "$have_generic128d" = "yes"; then
+        AC_DEFINE(HAVE_GENERIC128D,1,[Define to enable GENERIC128D optimizations.])
+	if test "$PRECISION" != "d" ; then
+		AC_MSG_ERROR([GENERIC128D requires double precision])
+	fi
+fi
+AM_CONDITIONAL(HAVE_GENERIC128D, test "$have_generic128d" = "yes")
+
 dnl FIXME:
 dnl AC_ARG_ENABLE(mips-ps, [AC_HELP_STRING([--enable-mips-ps],[enable MIPS pair-single optimizations])], have_mips_ps=$enableval, have_mips_ps=no)
 dnl if test "$have_mips_ps" = "yes"; then
@@ -680,6 +689,7 @@ AC_CONFIG_FILES([
    dft/simd/kcvi/Makefile
    dft/simd/altivec/Makefile
    dft/simd/neon/Makefile
+   dft/simd/generic128d/Makefile
 
    rdft/Makefile
    rdft/scalar/Makefile
@@ -695,6 +705,7 @@ AC_CONFIG_FILES([
    rdft/simd/kcvi/Makefile
    rdft/simd/altivec/Makefile
    rdft/simd/neon/Makefile
+   rdft/simd/generic128d/Makefile
 
    reodft/Makefile
 

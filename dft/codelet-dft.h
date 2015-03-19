@@ -103,5 +103,6 @@ extern const solvtab X(solvtab_dft_avx512);
 extern const solvtab X(solvtab_dft_kcvi);
 extern const solvtab X(solvtab_dft_altivec);
 extern const solvtab X(solvtab_dft_neon);
+extern const solvtab X(solvtab_dft_generic128d);
 
 #endif				/* __DFT_CODELET_H__ */
