@@ -52,6 +52,9 @@
 #    define ALIGNMENT 16     /* Alignment for the LD/ST macros */
 #  endif
 #  define ALIGNMENTA 64   /* Alignment for the LDA/STA macros */
+#elif defined(HAVE_GENERIC128D)
+#    define ALIGNMENT 16
+#    define ALIGNMENTA 16
 #endif
 
 #if HAVE_SIMD
