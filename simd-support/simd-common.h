@@ -45,13 +45,16 @@
 #elif defined(HAVE_NEON)
 #  define ALIGNMENT 8     /* Alignment for the LD/ST macros */
 #  define ALIGNMENTA 8    /* Alignment for the LDA/STA macros */
-#elif defined(HAVE_KCVI) || defined(HAVE_AVX512)
+#elif defined(HAVE_KCVI)
 #  if defined(FFTW_SINGLE)
 #    define ALIGNMENT 8     /* Alignment for the LD/ST macros */
 #  else
 #    define ALIGNMENT 16     /* Alignment for the LD/ST macros */
 #  endif
 #  define ALIGNMENTA 64   /* Alignment for the LDA/STA macros */
+#elif defined(HAVE_GENERIC256D)
+#    define ALIGNMENT 16
+#    define ALIGNMENTA 32
 #elif defined(HAVE_GENERIC128D)
 #    define ALIGNMENT 16
 #    define ALIGNMENTA 16

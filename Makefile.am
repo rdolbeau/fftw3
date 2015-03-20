@@ -78,6 +78,11 @@ GENERIC128D_LIBS = dft/simd/generic128d/libdft_generic128d_codelets.la	\
 rdft/simd/generic128d/librdft_generic128d_codelets.la
 endif
 
+if HAVE_GENERIC256D
+GENERIC256D_LIBS = dft/simd/generic256d/libdft_generic256d_codelets.la	\
+rdft/simd/generic256d/librdft_generic256d_codelets.la
+endif
+
 if THREADS
 if COMBINED_THREADS
 COMBINED_THREADLIBS=threads/libfftw3@PREC_SUFFIX@_threads.la
@@ -100,6 +105,7 @@ libfftw3@PREC_SUFFIX@_la_LIBADD =			\
 	api/libapi.la					\
         $(SIMD_LIBS) $(SSE2_LIBS) $(AVX_LIBS) $(AVX2_LIBS) $(ALTIVEC_LIBS) $(NEON_LIBS) $(KCVI_LIBS)$(AVX512_LIBS) \
 	$(GENERIC128D_LIBS) \
+	$(GENERIC256D_LIBS) \
 	$(COMBINED_THREADLIBS)
 
 if QUAD
