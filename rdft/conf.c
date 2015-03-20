@@ -90,4 +90,8 @@ void X(rdft_conf_standard)(planner *p)
      if (X(have_simd_generic128d)())
 	  X(solvtab_exec)(X(solvtab_rdft_generic128d), p);
 #endif
+#if HAVE_GENERIC256D
+     if (X(have_simd_generic256d)())
+	  X(solvtab_exec)(X(solvtab_rdft_generic256d), p);
+#endif
 }

@@ -197,6 +197,15 @@ if test "$have_generic128d" = "yes"; then
 fi
 AM_CONDITIONAL(HAVE_GENERIC128D, test "$have_generic128d" = "yes")
 
+AC_ARG_ENABLE(generic256d, [AC_HELP_STRING([--enable-generic256d],[enable GENERIC256D optimizations])], have_generic256d=$enableval, have_generic256d=no)
+if test "$have_generic256d" = "yes"; then
+        AC_DEFINE(HAVE_GENERIC256D,1,[Define to enable GENERIC256D optimizations.])
+	if test "$PRECISION" != "d" ; then
+		AC_MSG_ERROR([GENERIC256D requires double precision])
+	fi
+fi
+AM_CONDITIONAL(HAVE_GENERIC256D, test "$have_generic256d" = "yes")
+
 dnl FIXME:
 dnl AC_ARG_ENABLE(mips-ps, [AC_HELP_STRING([--enable-mips-ps],[enable MIPS pair-single optimizations])], have_mips_ps=$enableval, have_mips_ps=no)
 dnl if test "$have_mips_ps" = "yes"; then
@@ -690,6 +699,7 @@ AC_CONFIG_FILES([
    dft/simd/altivec/Makefile
    dft/simd/neon/Makefile
    dft/simd/generic128d/Makefile
+   dft/simd/generic256d/Makefile
 
    rdft/Makefile
    rdft/scalar/Makefile
@@ -706,6 +716,7 @@ AC_CONFIG_FILES([
    rdft/simd/altivec/Makefile
    rdft/simd/neon/Makefile
    rdft/simd/generic128d/Makefile
+   rdft/simd/generic256d/Makefile
 
    reodft/Makefile
 
