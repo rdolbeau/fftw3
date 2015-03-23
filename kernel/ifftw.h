@@ -98,7 +98,8 @@ extern void X(extract_reim)(int sign, R *c, R **r, R **i);
 
 /* define HAVE_SIMD if any simd extensions are supported */
 #if defined(HAVE_SSE) || defined(HAVE_SSE2) || defined(HAVE_ALTIVEC) || \
-     defined(HAVE_MIPS_PS) || defined(HAVE_AVX) || defined(HAVE_AVX2) || defined(HAVE_AVX512) || defined(HAVE_KCVI)
+     defined(HAVE_MIPS_PS) || defined(HAVE_AVX) || defined(HAVE_AVX2) || defined(HAVE_AVX512) || defined(HAVE_KCVI) || \
+      defined(HAVE_GENERIC128D) || defined(HAVE_GENERIC256D)
 #define HAVE_SIMD 1
 #else
 #define HAVE_SIMD 0
@@ -110,6 +111,8 @@ extern int X(have_simd_avx2)(void);
 extern int X(have_simd_avx512)(void);
 extern int X(have_simd_altivec)(void);
 extern int X(have_simd_neon)(void);
+extern int X(have_simd_generic128d)(void);
+extern int X(have_simd_generic256d)(void);
 
 /* forward declarations */
 typedef struct problem_s problem;
