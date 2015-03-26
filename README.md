@@ -1,3 +1,5 @@
+This is superseded by <https://github.com/FFTW-oss/fftw3>
+
 This is a fork of the official FFTW3 repository at <https://github.com/FFTW/fftw3> including support for the Knight Corner Vector Instruction for the Xeon Phi, AVX2 (FMA, really) from Haswell, AVX-512 from the upcoming Knight Landing. It also has support for double-precision in Neon (for the aarch64 architecture).
 
 # How to use it
