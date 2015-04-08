@@ -107,6 +107,16 @@ AM_CONDITIONAL(QUAD, test "$ok" = "yes")
 AC_SUBST(PRECISION)
 AC_SUBST(CHECK_PL_OPTS)
 
+AC_ARG_ENABLE(intel-mkl, [AC_HELP_STRING([--enable-intel-mkl],[specify Intel MKL])], ok=$enableval, ok=no)
+if test "$ok" != "no"; then
+        AC_DEFINE(HAVE_INTEL_MKL,1,[Define to enable Intel MKL.])
+        MKL_LIB="-mkl"
+        MKL_INCDIR="-mkl"
+        AC_SUBST(MKL_INCDIR)
+        AC_SUBST(MKL_LIB)
+fi
+AM_CONDITIONAL(HAVE_INTEL_MKL, test "$with_intel_mkl" != "no")
+
 AC_ARG_ENABLE(avx, [AC_HELP_STRING([--enable-avx],[enable AVX optimizations])], have_avx=$enableval, have_avx=no)
 if test "$have_avx" = "yes"; then
         AC_DEFINE(HAVE_AVX,1,[Define to enable AVX optimizations.])
@@ -808,6 +818,8 @@ AC_CONFIG_FILES([
    dft/simd/neon/Makefile
    dft/simd/generic-simd128/Makefile
    dft/simd/generic-simd256/Makefile
+   dft/intel/Makefile
+   dft/intel/intel-mkl/Makefile
 
    rdft/Makefile
    rdft/scalar/Makefile

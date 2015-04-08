@@ -34,6 +34,8 @@ plan-guru64-dft-r2c.c plan-guru64-dft.c plan-guru64-r2r.c		\
 plan-guru64-split-dft-c2r.c plan-guru64-split-dft-r2c.c			\
 plan-guru64-split-dft.c mktensor-iodims64.c
 
+libapi_la_CFLAGS= @MKL_INCDIR@
+
 BUILT_SOURCES = fftw3.f fftw3.f03.in fftw3.f03 fftw3l.f03 fftw3q.f03
 CLEANFILES = fftw3.f03
 

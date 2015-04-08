@@ -62,6 +62,10 @@ plan *X(mkplan_dft)(size_t size, const plan_adt *adt, dftapply apply);
 /* various solvers */
 solver *X(mksolver_dft_direct)(kdft k, const kdft_desc *desc);
 solver *X(mksolver_dft_directbuf)(kdft k, const kdft_desc *desc);
+#if HAVE_INTEL_MKL
+solver *X(mksolver_dft_direct_intel_mkl)(kdft_intel_mkl k, const kdft_desc *desc);
+#endif
+
 
 void X(dft_rank0_register)(planner *p);
 void X(dft_rank_geq2_register)(planner *p);

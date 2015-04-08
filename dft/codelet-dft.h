@@ -60,6 +60,12 @@ typedef void (*kdft) (const R *ri, const R *ii, R *ro, R *io,
                       stride is, stride os, INT vl, INT ivs, INT ovs);
 void X(kdft_register)(planner *p, kdft codelet, const kdft_desc *desc);
 
+#if HAVE_INTEL_MKL
+#include <mkl_dfti.h>
+typedef void (*kdft_intel_mkl) (DFTI_DESCRIPTOR *the_descriptor, const R *ri, const R *ii, R *ro, R *io,
+                                 stride is, stride os, int vl, int ivs, int ovs);
+void X(kdft_intel_mkl_register)(planner *p, kdft_intel_mkl codelet, const kdft_desc *desc);
+#endif
 
 typedef struct ct_desc_s ct_desc;
 
@@ -108,5 +114,8 @@ extern const solvtab X(solvtab_dft_vsx);
 extern const solvtab X(solvtab_dft_neon);
 extern const solvtab X(solvtab_dft_generic_simd128);
 extern const solvtab X(solvtab_dft_generic_simd256);
+#if HAVE_INTEL_MKL
+extern const solvtab X(solvtab_dft_mkl);
+#endif
 
 #endif				/* __DFT_CODELET_H__ */

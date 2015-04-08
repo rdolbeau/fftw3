@@ -46,6 +46,14 @@ SIMD_LIBS =						\
 	simd-support/libsimd_support.la			\
 	simd-support/libsimd_sse2_nonportable.la
 
+if HAVE_INTEL_MKL
+INTEL_MKL_LIBS=                                                        \
+        dft/intel/libdft_intel.la                                      \
+        dft/intel/intel-mkl/libdft_codelets_mkl.la              
+else
+INTEL_MKL_LIBS=
+endif
+
 if HAVE_SSE2
 SSE2_LIBS = dft/simd/sse2/libdft_sse2_codelets.la	\
 rdft/simd/sse2/librdft_sse2_codelets.la
@@ -127,13 +135,13 @@ libfftw3@PREC_SUFFIX@_la_LIBADD =			\
         $(AVX2_LIBS) $(ALTIVEC_LIBS) \
         $(VSX_LIBS) $(NEON_LIBS) $(KCVI_LIBS) $(AVX512_LIBS) \
         $(GENERIC_SIMD128_LIBS) $(GENERIC_SIMD256_LIBS) \
-	$(COMBINED_THREADLIBS)
+	$(COMBINED_THREADLIBS) $(INTEL_MKL_LIBS)
 
 if QUAD
 # cannot use -no-undefined since dependent on libquadmath
 libfftw3@PREC_SUFFIX@_la_LDFLAGS = -version-info @SHARED_VERSION_INFO@
 else
-libfftw3@PREC_SUFFIX@_la_LDFLAGS = -no-undefined -version-info	\
+libfftw3@PREC_SUFFIX@_la_LDFLAGS = @MKL_LIB@ -no-undefined -version-info	\
 @SHARED_VERSION_INFO@
 endif
 
