@@ -132,6 +132,33 @@ if test "$have_avx" = "yes"; then
 fi
 AM_CONDITIONAL(HAVE_AVX, test "$have_avx" = "yes")
 
+AC_ARG_ENABLE(avx2, [AC_HELP_STRING([--enable-avx2],[enable AVX2 optimizations])], have_avx2=$enableval, have_avx2=no)
+if test "$have_avx2" = "yes"; then
+        AC_DEFINE(HAVE_AVX2,1,[Define to enable AVX2 optimizations.])
+	if test "$PRECISION" != "d" -a "$PRECISION" != "s"; then
+		AC_MSG_ERROR([AVX2 requires single or double precision])
+	fi
+fi
+AM_CONDITIONAL(HAVE_AVX2, test "$have_avx2" = "yes")
+
+AC_ARG_ENABLE(avx512, [AC_HELP_STRING([--enable-avx512],[enable AVX512 optimizations])], have_avx512=$enableval, have_avx512=no)
+if test "$have_avx512" = "yes"; then
+        AC_DEFINE(HAVE_AVX512,1,[Define to enable AVX512 optimizations.])
+	if test "$PRECISION" != "d" -a "$PRECISION" != "s"; then
+		AC_MSG_ERROR([AVX512 requires single or double precision])
+	fi
+fi
+AM_CONDITIONAL(HAVE_AVX512, test "$have_avx512" = "yes")
+
+AC_ARG_ENABLE(kcvi, [AC_HELP_STRING([--enable-kcvi],[enable Knights Corner vector instructions optimizations])], have_kcvi=$enableval, have_kcvi=no)
+if test "$have_kcvi" = "yes"; then
+        AC_DEFINE(HAVE_KCVI,1,[Define to enable KCVI optimizations.])
+	if test "$PRECISION" != "d" -a "$PRECISION" != "s"; then
+		AC_MSG_ERROR([Knights Corner vector instructions requires single or double precision])
+	fi
+fi
+AM_CONDITIONAL(HAVE_KCVI, test "$have_kcvi" = "yes")
+
 AC_ARG_ENABLE(altivec, [AC_HELP_STRING([--enable-altivec],[enable Altivec optimizations])], have_altivec=$enableval, have_altivec=no)
 if test "$have_altivec" = "yes"; then
 	AC_DEFINE(HAVE_ALTIVEC,1,[Define to enable Altivec optimizations.])
@@ -144,11 +171,40 @@ AM_CONDITIONAL(HAVE_ALTIVEC, test "$have_altivec" = "yes")
 AC_ARG_ENABLE(neon, [AC_HELP_STRING([--enable-neon],[enable ARM NEON optimizations])], have_neon=$enableval, have_neon=no)
 if test "$have_neon" = "yes"; then
 	AC_DEFINE(HAVE_NEON,1,[Define to enable ARM NEON optimizations.])
-	if test "$PRECISION" != "s"; then
-		AC_MSG_ERROR([NEON requires single precision])
-	fi
+        case "${host_cpu}" in
+                aarch64)
+                ;;
+                *)
+		if test "$PRECISION" != "s"; then
+			AC_MSG_ERROR([NEON requires single precision])
+		fi
+                ;;
+        esac
 fi
 AM_CONDITIONAL(HAVE_NEON, test "$have_neon" = "yes")
+
+AC_ARG_ENABLE(armv8cyclecounter, [AC_HELP_STRING([--enable-armv8cyclecounter],[enable the cycle counter on ARMv8 ; require enabling in kernel mode, see <https://github.com/rdolbeau/enable_arm_pmu>])], have_armv8cyclecounter=$enableval)
+if test "$have_armv8cyclecounter"x = "yes"x; then
+	AC_DEFINE(HAVE_ARMV8CC,1,[Define if you have enabled the cycle counter on ARMv8])
+fi
+
+AC_ARG_ENABLE(generic128d, [AC_HELP_STRING([--enable-generic128d],[enable GENERIC128D optimizations])], have_generic128d=$enableval, have_generic128d=no)
+if test "$have_generic128d" = "yes"; then
+        AC_DEFINE(HAVE_GENERIC128D,1,[Define to enable GENERIC128D optimizations.])
+	if test "$PRECISION" != "d" ; then
+		AC_MSG_ERROR([GENERIC128D requires double precision])
+	fi
+fi
+AM_CONDITIONAL(HAVE_GENERIC128D, test "$have_generic128d" = "yes")
+
+AC_ARG_ENABLE(generic256d, [AC_HELP_STRING([--enable-generic256d],[enable GENERIC256D optimizations])], have_generic256d=$enableval, have_generic256d=no)
+if test "$have_generic256d" = "yes"; then
+        AC_DEFINE(HAVE_GENERIC256D,1,[Define to enable GENERIC256D optimizations.])
+	if test "$PRECISION" != "d" ; then
+		AC_MSG_ERROR([GENERIC256D requires double precision])
+	fi
+fi
+AM_CONDITIONAL(HAVE_GENERIC256D, test "$have_generic256d" = "yes")
 
 dnl FIXME:
 dnl AC_ARG_ENABLE(mips-ps, [AC_HELP_STRING([--enable-mips-ps],[enable MIPS pair-single optimizations])], have_mips_ps=$enableval, have_mips_ps=no)
@@ -275,6 +331,28 @@ case "${ax_cv_c_compiler_vendor}" in
 		[AC_MSG_ERROR([Need a version of gcc with -mavx])])
 	fi
 
+	# AVX2
+	if test "$have_avx2" = "yes" -a "x$AVX2_CFLAGS" = x; then
+	    AX_CHECK_COMPILER_FLAGS(-mavx2, [AVX2_CFLAGS="-mavx2"],
+		[AC_MSG_ERROR([Need a version of gcc with -mavx2])])
+	fi
+	if test "$have_avx2" = "yes"; then
+	    AX_CHECK_COMPILER_FLAGS(-mfma, [AVX2_CFLAGS="$AVX2_CFLAGS -mfma"],
+		[AC_MSG_WARN([Need a version of gcc with -mfma (harmless for icc)])])
+	fi
+
+	# AVX512
+	if test "$have_avx512" = "yes" -a "x$AVX512_CFLAGS" = x; then
+	    AX_CHECK_COMPILER_FLAGS(-mavx512f, [AVX512_CFLAGS="-mavx512f"],
+		[AC_MSG_ERROR([Need a version of gcc with -mavx512f])])
+	fi
+
+	# KCVI
+	if test "$have_kcvi" = "yes" -a "x$KCVI_CFLAGS" = x; then
+	    AX_CHECK_COMPILER_FLAGS(-mmic, [KCVI_CFLAGS="-mmic"],
+		[AC_MSG_ERROR([Need a version of icc with -mmic])])
+	fi
+
 	if test "$have_altivec" = "yes" -a "x$ALTIVEC_CFLAGS" = x; then
 	    # -DFAKE__VEC__ is a workaround because gcc-3.3 does not
 	    # #define __VEC__ with -maltivec.
@@ -285,10 +363,16 @@ case "${ax_cv_c_compiler_vendor}" in
 			[AC_MSG_ERROR([Need a version of gcc with -maltivec])])])])
 	fi
 
-	if test "$have_neon" = "yes" -a "x$NEON_CFLAGS" = x; then
-	    AX_CHECK_COMPILER_FLAGS(-mfpu=neon, [NEON_CFLAGS="-mfpu=neon"],
-		[AC_MSG_ERROR([Need a version of gcc with -mfpu=neon])])
-	fi
+        case "${host_cpu}" in
+                aarch64)
+                ;;
+                *)
+	        if test "$have_neon" = "yes" -a "x$NEON_CFLAGS" = x; then
+	            AX_CHECK_COMPILER_FLAGS(-mfpu=neon, [NEON_CFLAGS="-mfpu=neon"],
+			[AC_MSG_ERROR([Need a version of gcc with -mfpu=neon])])
+	        fi
+                ;;
+        esac
 
 	dnl FIXME:
 	dnl elif test "$have_mips_ps" = "yes"; then
@@ -308,6 +392,9 @@ esac
 
 AC_SUBST(SSE2_CFLAGS)
 AC_SUBST(AVX_CFLAGS)
+AC_SUBST(AVX2_CFLAGS)
+AC_SUBST(AVX512_CFLAGS)
+AC_SUBST(KCVI_CFLAGS)
 AC_SUBST(ALTIVEC_CFLAGS)
 AC_SUBST(NEON_CFLAGS)
 
@@ -540,6 +627,36 @@ AM_CONDITIONAL(OPENMP, test "$enable_openmp" = "yes")
 AM_CONDITIONAL(SMP, test "$enable_threads" = "yes" -o "$enable_openmp" = "yes")
 AM_CONDITIONAL(COMBINED_THREADS, test x"$with_combined_threads" = xyes)
 
+
+dnl -----------------------------------------------------------------------
+dnl Check for not-always-available (not quite) cycle counters
+case "${host_cpu}" in
+        armv7*)
+        AC_MSG_CHECKING([armv7a has 64 bits readable CNTVCT])
+        AC_RUN_IFELSE(
+                [AC_LANG_PROGRAM([[#include <stdint.h>]],
+                        [[uint32_t Rt, Rt2 = 0;asm volatile("mrrc p15, 1, %0, %1, c14" : "=r"(Rt), "=r"(Rt2));]]
+                )],
+                [AC_DEFINE(ARMV7A_HAS_CNTCVT,1,[Define if CNTVCT is 64 bits readable on armv7a ])
+                 AC_MSG_RESULT([yes])],
+                [AC_MSG_RESULT([no])]
+                )
+        ;;
+        aarch64)
+        AC_MSG_CHECKING([armv8 has 64 bits readable CNTVCT_EL0])
+        AC_RUN_IFELSE(
+                [AC_LANG_PROGRAM([[#include <stdint.h>]],
+                        [[uint64_t Rt;asm volatile("mrs %0, CNTVCT_EL0" : "=r" (Rt));]]
+                )],
+                [AC_DEFINE(ARMV8_HAS_CNTCVT_EL0,1,[Define if CNTVCT_EL0 is 64 bits readable on armv8 ])
+                 AC_MSG_RESULT([yes])],
+                [AC_MSG_RESULT([no])]
+                )
+        ;;
+        *)
+        ;;
+esac
+
 dnl -----------------------------------------------------------------------
 
 AC_MSG_CHECKING([whether a cycle counter is available])
@@ -576,8 +693,13 @@ AC_CONFIG_FILES([
    dft/simd/common/Makefile
    dft/simd/sse2/Makefile
    dft/simd/avx/Makefile
+   dft/simd/avx2/Makefile
+   dft/simd/avx512/Makefile
+   dft/simd/kcvi/Makefile
    dft/simd/altivec/Makefile
    dft/simd/neon/Makefile
+   dft/simd/generic128d/Makefile
+   dft/simd/generic256d/Makefile
 
    rdft/Makefile
    rdft/scalar/Makefile
@@ -588,8 +710,13 @@ AC_CONFIG_FILES([
    rdft/simd/common/Makefile
    rdft/simd/sse2/Makefile
    rdft/simd/avx/Makefile
+   rdft/simd/avx2/Makefile
+   rdft/simd/avx512/Makefile
+   rdft/simd/kcvi/Makefile
    rdft/simd/altivec/Makefile
    rdft/simd/neon/Makefile
+   rdft/simd/generic128d/Makefile
+   rdft/simd/generic256d/Makefile
 
    reodft/Makefile
 

@@ -51,14 +51,43 @@ static inline int cpuid_ecx(int op)
      return cpu_info[2];
 #    endif
 #    else
-     int eax, ecx, edx;
+     int eax, ecx = 0, edx;
 
      __asm__("pushq %%rbx\n\tcpuid\n\tpopq %%rbx"
-	     : "=a" (eax), "=c" (ecx), "=d" (edx)
+	     : "=a" (eax), "+c" (ecx), "=d" (edx)
 	     : "a" (op));
      return ecx;
 #    endif
 }
+
+static inline int cpuid_ebx(int op)
+{
+#    ifdef _MSC_VER
+#    ifdef __INTEL_COMPILER
+     int result;
+     _asm {
+          push rbx
+          mov eax,op
+          cpuid
+          mov result,ebx
+          pop rbx
+     }
+     return result;
+#    else
+     int cpu_info[4];
+     __cpuid(cpu_info,op);
+     return cpu_info[1];
+#    endif
+#    else
+     int eax, ecx = 0, edx;
+
+     __asm__("pushq %%rbx\n\tcpuid\nmov %%ebx,%%ecx\n\tpopq %%rbx"
+             : "=a" (eax), "+c" (ecx), "=d" (edx)
+             : "a" (op));
+     return ecx;
+#    endif
+}
+
 
 static inline int xgetbv_eax(int op)
 {
