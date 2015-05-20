@@ -23,6 +23,13 @@
 static X(before_planner_hook_t) before_planner_hook = 0;
 static X(after_planner_hook_t) after_planner_hook = 0;
 
+#ifdef CONFIG_MUTUALEXCLUSIONPLANNER
+#include "lock.h"
+#else
+void X(grab_plan_lock)(void) {}
+void X(release_plan_lock)(void) {}
+#endif
+
 void X(set_planner_hooks)(X(before_planner_hook_t) before,
                           X(after_planner_hook_t) after)
 {
@@ -100,6 +107,8 @@ apiplan *X(mkapiplan)(int sign, unsigned flags, problem *prb)
      
      if (before_planner_hook)
           before_planner_hook();
+
+     X(grab_plan_lock)();
      
      plnr = X(the_planner)();
 
@@ -173,6 +182,8 @@ apiplan *X(mkapiplan)(int sign, unsigned flags, problem *prb)
 #ifdef FFTW_RANDOM_ESTIMATOR
      X(random_estimate_seed)++; /* subsequent "random" plans are distinct */
 #endif
+
+     X(release_plan_lock)();
 
      if (after_planner_hook)
           after_planner_hook();

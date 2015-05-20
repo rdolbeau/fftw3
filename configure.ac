@@ -193,6 +193,11 @@ if test "$have_armv8cyclecounter"x = "yes"x; then
 	AC_DEFINE(HAVE_ARMV8CC,1,[Define if you have enabled the cycle counter on ARMv8])
 fi
 
+AC_ARG_ENABLE(mutualexclusionplan, [AC_HELP_STRING([--enable-mutualexclusionplan],[enable mutual exclusion on the planner])], have_mutualexclusionplan=$enableval)
+if test "$have_mutualexclusionplan"x = "yes"x; then
+	AC_DEFINE(CONFIG_MUTUALEXCLUSIONPLANNER,1,[Define if you have enabled mutual exclusion on the planner])
+fi
+
 AC_ARG_ENABLE(generic-simd128, [AC_HELP_STRING([--enable-generic-simd128],[enable generic (gcc) 128-bit SIMD optimizations])], have_generic_simd128=$enableval, have_generic_simd128=no)
 if test "$have_generic_simd128" = "yes"; then
         AC_DEFINE(HAVE_GENERIC_SIMD128,1,[Define to enable generic (gcc) 128-bit SIMD optimizations.])
