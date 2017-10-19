@@ -234,6 +234,19 @@ if test "$have_generic_simd256" = "yes"; then
 fi
 AM_CONDITIONAL(HAVE_GENERIC_SIMD256, test "$have_generic_simd256" = "yes")
 
+AC_ARG_ENABLE(sve, [AC_HELP_STRING([--enable-sve],[enable ARM SVE optimizations])], have_sve=$enableval, have_sve=no)
+if test "$have_sve" = "yes"; then
+        AC_DEFINE(HAVE_SVE,1,[Define to enable ARM SVE optimizations.])
+        case "${host_cpu}" in
+                aarch64)
+                ;;
+                *)
+                AC_MSG_ERROR([SVE requires aarch64])
+                ;;
+        esac
+fi
+AM_CONDITIONAL(HAVE_SVE, test "$have_sve" = "yes")
+
 
 dnl FIXME:
 dnl AC_ARG_ENABLE(mips-ps, [AC_HELP_STRING([--enable-mips-ps],[enable MIPS pair-single optimizations])], have_mips_ps=$enableval, have_mips_ps=no)
@@ -772,6 +785,7 @@ AC_CONFIG_FILES([
    dft/simd/altivec/Makefile
    dft/simd/vsx/Makefile
    dft/simd/neon/Makefile
+   dft/simd/sve/Makefile
    dft/simd/generic-simd128/Makefile
    dft/simd/generic-simd256/Makefile
 
@@ -792,6 +806,7 @@ AC_CONFIG_FILES([
    rdft/simd/altivec/Makefile
    rdft/simd/vsx/Makefile
    rdft/simd/neon/Makefile
+   rdft/simd/sve/Makefile
    rdft/simd/generic-simd128/Makefile
    rdft/simd/generic-simd256/Makefile
 
