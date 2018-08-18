@@ -68,6 +68,26 @@
 #    define ALIGNMENT 16
 #    define ALIGNMENTA 16
 #  endif
+#elif defined(HAVE_SVE)
+#if SVE_SIZE == 512
+#  if defined(FFTW_SINGLE)
+#    define ALIGNMENT 8
+#    define ALIGNMENTA 64
+#  else
+#    define ALIGNMENT 16
+#    define ALIGNMENTA 64
+#  endif
+#elif SVE_SIZE == 256
+#  if defined(FFTW_SINGLE)
+#    define ALIGNMENT 8
+#    define ALIGNMENTA 32
+#  else
+#    define ALIGNMENT 16
+#    define ALIGNMENTA 32
+#  endif
+#else /* SVE_SIZE */
+#error "SVE_SIZE must be 256 or 512 bits"
+#endif /* SVE_SIZE */
 #endif
 
 #if HAVE_SIMD
