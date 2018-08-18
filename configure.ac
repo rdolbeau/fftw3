@@ -239,6 +239,7 @@ if test "$have_sve" = "yes"; then
         AC_DEFINE(HAVE_SVE,1,[Define to enable ARM SVE optimizations.])
         case "${host_cpu}" in
                 aarch64)
+		AC_DEFINE([SVE_SIZE], [512], [Assumed size of SVE registers.])
                 ;;
                 *)
                 AC_MSG_ERROR([SVE requires aarch64])
@@ -246,6 +247,21 @@ if test "$have_sve" = "yes"; then
         esac
 fi
 AM_CONDITIONAL(HAVE_SVE, test "$have_sve" = "yes")
+
+AC_ARG_ENABLE(sve256, [AC_HELP_STRING([--enable-sve256],[enable ARM SVE optimizations])], have_sve=$enableval, have_sve=no)
+if test "$have_sve" = "yes"; then
+        AC_DEFINE(HAVE_SVE,1,[Define to enable ARM SVE optimizations.])
+        case "${host_cpu}" in
+                aarch64)
+		AC_DEFINE([SVE_SIZE], [256], [Assumed size of SVE registers.])
+                ;;
+                *)
+                AC_MSG_ERROR([SVE requires aarch64])
+                ;;
+        esac
+fi
+AM_CONDITIONAL(HAVE_SVE, test "$have_sve" = "yes")
+
 
 
 dnl FIXME:
