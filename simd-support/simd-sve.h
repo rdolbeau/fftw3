@@ -41,17 +41,20 @@
 #endif /* FFTW_SINGLE */
 
 #define SIMD_SUFFIX  _sve  /* for renaming */
+#if SVE_SIZE == 512
 /* FIXME: this hardwire to 512 bits */
 #define VL DS(4, 8)        /* SIMD complex vector length */
+#elif SVE_SIZE == 256
+/* FIXME: this hardwire to 256 bits */
+#define VL DS(2, 4)        /* SIMD complex vector length */
+#else /* SVE_SIZE */
+#error "SVE_SIZE must be 256 or 512 bits"
+#endif /* SVE_SIZE */
 #define SIMD_VSTRIDE_OKA(x) ((x) == 2) 
 #define SIMD_STRIDE_OKPAIR SIMD_STRIDE_OK
 
 #if defined(__GNUC__) && !defined(__ARM_FEATURE_SVE) /* sanity check */
 #error "compiling simd-sve.h without SVE support"
-#endif
-
-#if !defined(HAVE_FMA)
-#warning "You should probably enable FMAs with --enable-fma for SVE"
 #endif
 
 #include <arm_sve.h>
@@ -65,6 +68,7 @@ typedef DS(svfloat64_t, svfloat32_t) V;
 #define VZERO VLIT1(DS(0.,0.f))
 #define VRONE VLIT(DS(1.,1.f),DS(0.,0.f))
 #define VCI VLIT(DS(0.,0.f),DS(1.,1.f))
+#define VCONEMI VLIT(DS(1.,1.f),DS(-1.,-1.f))
 #define VONE  VLIT1(DS(1.,1.f))
 #define VMINUSONE VLIT1(DS(-1.,-1.f))
 
@@ -78,7 +82,8 @@ typedef DS(svfloat64_t, svfloat32_t) V;
 #endif
 
 /* FXIME: there is a better way, surely */
-#define VCONJ(x)  TYPESUF(svcmla,_z)(ALLA,TYPESUF(svcmla,_z)(ALLA,VZERO,x,VRONE,0),x,VRONE,270)
+/* #define VCONJ(x)  TYPESUF(svcmla,_z)(ALLA,TYPESUF(svcmla,_z)(ALLA,VZERO,x,VRONE,0),x,VRONE,270) */
+#define VCONJ(x) TYPESUF(svmul,_z)(ALLA,x,VCONEMI)
 #define VBYI(x)  TYPESUF(svcmla,_z)(ALLA,TYPESUF(svcmla,_z)(ALLA,VZERO,x,VCI,0),x,VCI,90)
 
 #define VNEG(a)   TYPESUF(svneg,_z)(ALLA,a)
@@ -91,7 +96,7 @@ typedef DS(svfloat64_t, svfloat32_t) V;
 #define VFMAI(b, c)    TYPESUF(svcadd,_z)(ALLA,c,b,90)
 #define VFNMSI(b, c)   TYPESUF(svcadd,_z)(ALLA,c,b,270)
 /* FIXME: next 3 overkill ? */
-#if 1
+#if 0
 #define VFMACONJ(b,c)  TYPESUF(svcmla,_z)(ALLA,TYPESUF(svcmla,_z)(ALLA,c,b,VRONE,0),b,VRONE,270)
 #else
 /* Use inline functions instead of macros to avoid replicating inputs */
@@ -103,10 +108,10 @@ static inline V VFMACONJ(V b, V c) {
 #define VFMSCONJ(b,c)  VFMACONJ(b,VNEG(c))
 #define VFNMSCONJ(b,c) VNEG(VFMSCONJ(b,c))
 
-#if 1
+#if 0
 #define VZMUL(a,b)    TYPESUF(svcmla,_z)(ALLA,TYPESUF(svcmla,_z)(ALLA,VZERO,a,b,0),a,b,90)
 #define VZMULJ(a,b)   TYPESUF(svcmla,_z)(ALLA,TYPESUF(svcmla,_z)(ALLA,VZERO,a,b,0),a,b,270)
-#define VZMULI(a,b)   TYPESUF(svcmla,_z)(ALLA,TYPESUF(svcmla,_z)(ALLA,VZERO,a,b,180),a,b,90)
+#define VZMULI(a,b)   VZMUL(VCI,VZMUL(a,b))
 #define VZMULIJ(a,b)   VZMUL(VCI,VZMULJ(a,b))
 #else
 /* Use inline functions instead of macros to avoid replicating inputs */
@@ -118,9 +123,10 @@ static inline V VZMULJ(V a, V b) {
         V m = TYPESUF(svcmla,_z)(ALLA,VZERO,a,b,0);
         return TYPESUF(svcmla,_z)(ALLA,m,a,b,270);
 }
+/* FIXME: there's probably a better way */
 static inline V VZMULI(V a, V b) {
-        V m = TYPESUF(svcmla,_z)(ALLA,VZERO,a,b,180);
-        return TYPESUF(svcmla,_z)(ALLA,m,a,b,90);
+	V m = VZMUL(a,b);
+	return VZMUL(VCI,m);
 }
 /* FIXME: there's probably a better way */
 static inline V VZMULIJ(V a, V b) {
@@ -156,6 +162,9 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
+  if (ovs==0) { // FIXME: hack for extra_iter hack support
+    v = svreinterpret_f32_f64(vdup_lane_f64(svreinterpret_f64_f32(v),0));
+  }
   svuint32_t  gvvl = svindex_u32(0, 1);
   gvvl = svmul_n_u32_z(svptrue_b32(), gvvl, sizeof(R)*ovs);
   gvvl = svzip1_u32(gvvl, gvvl);
@@ -181,13 +190,15 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
+  if (ovs==0) { // FIXME: hack for extra_iter hack support
+    v = svdupq_lane_f64(v,0);
+  }
   svuint64_t  gvvl = svindex_u64(0, 1);
   gvvl = svmul_n_u64_z(svptrue_b64(), gvvl, sizeof(R)*ovs);
   gvvl = svzip1_u64(gvvl, gvvl);
   gvvl = svadd_u64_z(svptrue_b64(), gvvl, svdupq_n_u64(0,sizeof(R)));
 
   svst1_scatter_u64offset_f64(ALLA, x, gvvl, v);
-
 }
 
 #endif /* FFTW_SINGLE */
@@ -226,12 +237,25 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 #endif /* FFTW_SINGLE */
 
 /* twiddle storage #1: compact, slower */
+#if SVE_SIZE == 512
 #ifdef FFTW_SINGLE
-# define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}, {TW_CEXP, v+4, x}, {TW_CEXP, v+5, x}, {TW_CEXP, v+6, x}, {TW_CEXP, v+7, x}
+# define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}, \
+                   {TW_CEXP, v+4, x}, {TW_CEXP, v+5, x}, {TW_CEXP, v+6, x}, {TW_CEXP, v+7, x}
 #else /* !FFTW_SINGLE */
 # define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}
 #endif /* FFTW_SINGLE */
 #define TWVL1 (VL)
+#elif SVE_SIZE == 256
+#ifdef FFTW_SINGLE
+# define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}
+#else /* !FFTW_SINGLE */
+# define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}
+#endif /* FFTW_SINGLE */
+#define TWVL1 (VL)
+#else /* SVE_SIZE */
+#error "SVE_SIZE must be 256 or 512 bits"
+#endif /* SVE_SIZE */
+
 
 static inline V BYTW1(const R *t, V sr)
 {
@@ -244,6 +268,7 @@ static inline V BYTWJ1(const R *t, V sr)
 }
 
 /* twiddle storage #2: twice the space, faster (when in cache) */
+#if SVE_SIZE == 512
 #ifdef FFTW_SINGLE
 # define VTW2(v,x)							     \
    {TW_COS, v  ,  x}, {TW_COS, v  , x}, {TW_COS, v+1,  x}, {TW_COS, v+1, x}, \
@@ -262,6 +287,22 @@ static inline V BYTWJ1(const R *t, V sr)
    {TW_SIN, v+2, -x}, {TW_SIN, v+2, x}, {TW_SIN, v+3, -x}, {TW_SIN, v+3, x}
 #endif /* FFTW_SINGLE */
 #define TWVL2 (2 * VL)
+#elif SVE_SIZE == 256
+#ifdef FFTW_SINGLE
+# define VTW2(v,x)                                                           \
+   {TW_COS, v  ,  x}, {TW_COS, v  , x}, {TW_COS, v+1,  x}, {TW_COS, v+1, x}, \
+   {TW_COS, v+2,  x}, {TW_COS, v+2, x}, {TW_COS, v+3,  x}, {TW_COS, v+3, x}, \
+   {TW_SIN, v  , -x}, {TW_SIN, v  , x}, {TW_SIN, v+1, -x}, {TW_SIN, v+1, x}, \
+   {TW_SIN, v+2, -x}, {TW_SIN, v+2, x}, {TW_SIN, v+3, -x}, {TW_SIN, v+3, x}
+#else /* !FFTW_SINGLE */
+# define VTW2(v,x)                                                           \
+   {TW_COS, v  ,  x}, {TW_COS, v  , x}, {TW_COS, v+1,  x}, {TW_COS, v+1, x}, \
+   {TW_SIN, v  , -x}, {TW_SIN, v  , x}, {TW_SIN, v+1, -x}, {TW_SIN, v+1, x}
+#endif /* FFTW_SINGLE */
+#define TWVL2 (2 * VL)
+#else /* SVE_SIZE */
+#error "SVE_SIZE must be 256 or 512 bits"
+#endif /* SVE_SIZE */
 
 static inline V BYTW2(const R *t, V sr)
 {
@@ -284,6 +325,7 @@ static inline V BYTWJ2(const R *t, V sr)
 #define TWVL3 TWVL1
 
 /* twiddle storage for split arrays */
+#if SVE_SIZE == 512
 #ifdef FFTW_SINGLE
 # define VTWS(v,x)                                                            \
   {TW_COS, v   , x}, {TW_COS, v+1 , x}, {TW_COS, v+2 , x}, {TW_COS, v+3 , x}, \
@@ -302,6 +344,23 @@ static inline V BYTWJ2(const R *t, V sr)
   {TW_SIN, v+4, x}, {TW_SIN, v+5, x}, {TW_SIN, v+6, x}, {TW_SIN, v+7, x}
 #endif /* FFTW_SINGLE */
 #define TWVLS (2 * VL)
+#elif SVE_SIZE == 256
+#ifdef FFTW_SINGLE
+# define VTWS(v,x)                                                            \
+  {TW_COS, v   , x}, {TW_COS, v+1 , x}, {TW_COS, v+2 , x}, {TW_COS, v+3 , x}, \
+  {TW_COS, v+4 , x}, {TW_COS, v+5 , x}, {TW_COS, v+6 , x}, {TW_COS, v+7 , x}, \
+  {TW_SIN, v   , x}, {TW_SIN, v+1 , x}, {TW_SIN, v+2 , x}, {TW_SIN, v+3 , x}, \
+  {TW_SIN, v+4 , x}, {TW_SIN, v+5 , x}, {TW_SIN, v+6 , x}, {TW_SIN, v+7 , x}
+#else /* !FFTW_SINGLE */
+# define VTWS(v,x)                                                        \
+  {TW_COS, v  , x}, {TW_COS, v+1, x}, {TW_COS, v+2, x}, {TW_COS, v+3, x}, \
+  {TW_SIN, v  , x}, {TW_SIN, v+1, x}, {TW_SIN, v+2, x}, {TW_SIN, v+3, x}
+#endif /* FFTW_SINGLE */
+#define TWVLS (2 * VL)
+#else /* SVE_SIZE */
+#error "SVE_SIZE must be 256 or 512 bits"
+#endif
+
 
 #define VLEAVE() /* nothing */
 
