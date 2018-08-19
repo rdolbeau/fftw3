@@ -248,6 +248,7 @@ if test "$have_sve" = "yes"; then
 fi
 AM_CONDITIONAL(HAVE_SVE, test "$have_sve" = "yes")
 
+if test "$have_sve" = "no"; then
 AC_ARG_ENABLE(sve256, [AC_HELP_STRING([--enable-sve256],[enable ARM SVE optimizations])], have_sve=$enableval, have_sve=no)
 if test "$have_sve" = "yes"; then
         AC_DEFINE(HAVE_SVE,1,[Define to enable ARM SVE optimizations.])
@@ -261,6 +262,7 @@ if test "$have_sve" = "yes"; then
         esac
 fi
 AM_CONDITIONAL(HAVE_SVE, test "$have_sve" = "yes")
+fi
 
 
 
