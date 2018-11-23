@@ -22,6 +22,9 @@
 #include "kernel/ifftw.h"
 
 #if HAVE_SVE
+#if defined(__ARM_FEATURE_SVE)
+#include <arm_sve.h>
+#endif
 
 /* check for an environment where signals are known to work */
 #if defined(unix) || defined(linux)
@@ -38,22 +41,15 @@
 
   static int really_have_sve(void)
   {
-#if 0
-       void (*oldsig)(int);
-       oldsig = signal(SIGILL, sighandler);
-       if (setjmp(jb)) {
-	    signal(SIGILL, oldsig);
-	    return 0;
-       } else {
-	    /* paranoia: encode the instruction in binary because the
-	       assembler may not recognize it without -mfpu=neon */
-	    /*asm volatile ("vand q0, q0, q0");*/
-	    asm volatile (".long 0xf2000150");
-	    signal(SIGILL, oldsig);
-	    return 1;
-       }
+#if defined(__GNUC__) && !defined(__ARM_FEATURE_SVE)
+#warning "SVE not supported"
+    return 0;
+#else
+    /* this only check for register width, not actual availability ...*/
+    if (svcntb() != SVE_SIZE/8)
+	return 0;
+    return 1;
 #endif
-return 1;
   }
 
   int X(have_simd_sve)(void)
