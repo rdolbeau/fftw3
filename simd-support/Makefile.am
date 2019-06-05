@@ -12,5 +12,5 @@ kcvi.c simd-kcvi.h \
 altivec.c simd-altivec.h vsx.c simd-vsx.h \
 neon.c simd-neon.h \
 simd-generic128.h simd-generic256.h \
-sve.c simd-sve.h
+sve.c simd-sve.h simd-halfsve.h
 
