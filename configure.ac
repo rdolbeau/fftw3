@@ -236,6 +236,7 @@ AM_CONDITIONAL(HAVE_GENERIC_SIMD256, test "$have_generic_simd256" = "yes")
 AC_ARG_ENABLE(sve, [AC_HELP_STRING([--enable-sve],[enable ARM SVE optimizations])], have_sve=$enableval, have_sve=no)
 if test "$have_sve" = "yes"; then
         AC_DEFINE(HAVE_SVE,1,[Define to enable ARM SVE optimizations.])
+	AC_DEFINE(HAVE_HALF_SVE,1,[Define to enable ARM Half-width SVE optimizations.])
         case "${host_cpu}" in
                 aarch64)
 		AC_DEFINE([SVE_SIZE], [512], [Assumed size of SVE registers.])
@@ -246,11 +247,13 @@ if test "$have_sve" = "yes"; then
         esac
 fi
 AM_CONDITIONAL(HAVE_SVE, test "$have_sve" = "yes")
+AM_CONDITIONAL(HAVE_HALF_SVE, test "$have_sve" = "yes")
 
 if test "$have_sve" = "no"; then
 AC_ARG_ENABLE(sve256, [AC_HELP_STRING([--enable-sve256],[enable ARM SVE optimizations])], have_sve=$enableval, have_sve=no)
 if test "$have_sve" = "yes"; then
         AC_DEFINE(HAVE_SVE,1,[Define to enable ARM SVE optimizations.])
+	AC_DEFINE(HAVE_HALF_SVE,1,[Define to enable ARM Half-width SVE optimizations.])
         case "${host_cpu}" in
                 aarch64)
 		AC_DEFINE([SVE_SIZE], [256], [Assumed size of SVE registers.])
@@ -261,6 +264,7 @@ if test "$have_sve" = "yes"; then
         esac
 fi
 AM_CONDITIONAL(HAVE_SVE, test "$have_sve" = "yes")
+AM_CONDITIONAL(HAVE_HALF_SVE, false)
 fi
 
 
@@ -803,6 +807,7 @@ AC_CONFIG_FILES([
    dft/simd/vsx/Makefile
    dft/simd/neon/Makefile
    dft/simd/sve/Makefile
+   dft/simd/halfsve/Makefile
    dft/simd/generic-simd128/Makefile
    dft/simd/generic-simd256/Makefile
 
@@ -824,6 +829,7 @@ AC_CONFIG_FILES([
    rdft/simd/vsx/Makefile
    rdft/simd/neon/Makefile
    rdft/simd/sve/Makefile
+   rdft/simd/halfsve/Makefile
    rdft/simd/generic-simd128/Makefile
    rdft/simd/generic-simd256/Makefile
 

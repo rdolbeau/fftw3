@@ -99,6 +99,10 @@ void X(rdft_conf_standard)(planner *p)
 #if HAVE_SVE
      if (X(have_simd_sve)())
           X(solvtab_exec)(X(solvtab_rdft_sve), p);
+#if HAVE_HALF_SVE
+     if (X(have_simd_sve)())
+          X(solvtab_exec)(X(solvtab_rdft_halfsve), p);
+#endif
 #endif
 #if HAVE_GENERIC_SIMD128
      X(solvtab_exec)(X(solvtab_rdft_generic_simd128), p);
