@@ -79,9 +79,6 @@ const char X(version)[] = PACKAGE "-" PACKAGE_VERSION
 
 #if HAVE_SVE
    "-sve"
-#ifdef HAVE_HALF_SVE
-   "-halfsve"
-#endif
 #endif
 
 #if defined(HAVE_GENERIC_SIMD128)

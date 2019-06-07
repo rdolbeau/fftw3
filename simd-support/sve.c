@@ -26,50 +26,24 @@
 #include <arm_sve.h>
 #endif
 
-/* check for an environment where signals are known to work */
-#if defined(unix) || defined(linux)
-  # include <signal.h>
-  # include <setjmp.h>
-
-  static jmp_buf jb;
-
-  static void sighandler(int x)
-  {
-       UNUSED(x);
-       longjmp(jb, 1);
-  }
-
-  static int really_have_sve(void)
-  {
+  static int sve_getwidth(void) {
 #if defined(__GNUC__) && !defined(__ARM_FEATURE_SVE)
 #warning "SVE not supported"
-    return 0;
+    return -1;
 #else
-    /* this only check for register width, not actual availability ...*/
-    if (svcntb() != SVE_SIZE/8)
-	return 0;
-    return 1;
+    return svcntb()*8;
 #endif
   }
 
-  int X(have_simd_sve)(void)
+  int X(have_simd_sve)(int minwidth)
   {
        static int init = 0, res;
 
        if (!init) {
-	    res = really_have_sve();
-	    init = 1;
+	    init = sve_getwidth();
        }
-       return res;
+       return ((init > 0) ? (minwidth <= init ? 1 : 0) : 0);
   }
 
-
-#else
-/* don't know how to autodetect NEON; assume it is present */
-  int X(have_simd_sve)(void)
-  {
-       return 1;
-  }
-#endif
 
 #endif
