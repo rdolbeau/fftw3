@@ -95,15 +95,13 @@ rdft/simd/neon/librdft_neon_codelets.la
 endif
 
 if HAVE_SVE
-if HAVE_HALF_SVE
-SVE_LIBS = dft/simd/sve/libdft_sve_codelets.la       \
-rdft/simd/sve/librdft_sve_codelets.la \
-dft/simd/halfsve/libdft_halfsve_codelets.la       \
-rdft/simd/halfsve/librdft_halfsve_codelets.la
-else
-SVE_LIBS = dft/simd/sve/libdft_sve_codelets.la       \
-rdft/simd/sve/librdft_sve_codelets.la
-endif
+SVE_LIBS = \
+dft/simd/sve128/libdft_sve128_codelets.la       \
+rdft/simd/sve128/librdft_sve128_codelets.la \
+dft/simd/sve256/libdft_sve256_codelets.la       \
+rdft/simd/sve256/librdft_sve256_codelets.la \
+dft/simd/sve512/libdft_sve512_codelets.la       \
+rdft/simd/sve512/librdft_sve512_codelets.la
 endif
 
 
