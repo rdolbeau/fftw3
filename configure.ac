@@ -254,7 +254,7 @@ if test "$have_sve" = "no"; then
 AC_ARG_ENABLE(sve256, [AC_HELP_STRING([--enable-sve256],[enable ARM SVE optimizations])], have_sve=$enableval, have_sve=no)
 if test "$have_sve" = "yes"; then
         AC_DEFINE(HAVE_SVE,1,[Define to enable ARM SVE optimizations.])
-	AC_DEFINE(HAVE_HALF_SVE,1,[Define to enable ARM Half-width SVE optimizations.])
+dnl	AC_DEFINE(HAVE_HALF_SVE,1,[Define to enable ARM Half-width SVE optimizations.])
         case "${host_cpu}" in
                 aarch64)
 		AC_DEFINE([SVE_SIZE], [256], [Assumed size of SVE registers.])
