@@ -43,13 +43,13 @@
 //#define SIMD_SUFFIX  _sve  /* for renaming */
 #if SVE_SIZE == 512
 #define VL DS(4, 8)        /* SIMD complex vector length */
-#define MASKA DS(svptrue_pat_b64(SV_VL8),vptrue_pat_b64(SV_VL16))
+#define MASKA DS(svptrue_pat_b64(SV_VL8),vptrue_pat_b32(SV_VL16))
 #elif SVE_SIZE == 256
 #define VL DS(2, 4)        /* SIMD complex vector length */
-#define MASKA DS(svptrue_pat_b64(SV_VL4),vptrue_pat_b64(SV_VL8))
+#define MASKA DS(svptrue_pat_b64(SV_VL4),vptrue_pat_b32(SV_VL8))
 #elif SVE_SIZE == 128
 #define VL DS(1, 2)        /* SIMD complex vector length */
-#define MASKA DS(svptrue_pat_b64(SV_VL2),vptrue_pat_b64(SV_VL4))
+#define MASKA DS(svptrue_pat_b64(SV_VL2),vptrue_pat_b32(SV_VL4))
 #else /* SVE_SIZE */
 #error "SVE_SIZE must be 128, 256 or 512 bits"
 #endif /* SVE_SIZE */
