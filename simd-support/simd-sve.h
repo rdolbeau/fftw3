@@ -163,7 +163,7 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   if (ovs==0) { // FIXME: hack for extra_iter hack support
-    v = svreinterpret_f32_f64(vdup_lane_f64(svreinterpret_f64_f32(v),0));
+    v = svreinterpret_f32_f64(svdup_lane_f64(svreinterpret_f64_f32(v),0));
   }
   svuint32_t  gvvl = svindex_u32(0, 1);
   gvvl = svmul_n_u32_z(svptrue_b32(), gvvl, sizeof(R)*ovs);
