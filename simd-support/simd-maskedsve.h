@@ -43,13 +43,13 @@
 //#define SIMD_SUFFIX  _sve  /* for renaming */
 #if SVE_SIZE == 512
 #define VL DS(4, 8)        /* SIMD complex vector length */
-#define MASKA DS(svptrue_pat_b64(SV_VL8),vptrue_pat_b32(SV_VL16))
+#define MASKA DS(svptrue_pat_b64(SV_VL8),svptrue_pat_b32(SV_VL16))
 #elif SVE_SIZE == 256
 #define VL DS(2, 4)        /* SIMD complex vector length */
-#define MASKA DS(svptrue_pat_b64(SV_VL4),vptrue_pat_b32(SV_VL8))
+#define MASKA DS(svptrue_pat_b64(SV_VL4),svptrue_pat_b32(SV_VL8))
 #elif SVE_SIZE == 128
 #define VL DS(1, 2)        /* SIMD complex vector length */
-#define MASKA DS(svptrue_pat_b64(SV_VL2),vptrue_pat_b32(SV_VL4))
+#define MASKA DS(svptrue_pat_b64(SV_VL2),svptrue_pat_b32(SV_VL4))
 #else /* SVE_SIZE */
 #error "SVE_SIZE must be 128, 256 or 512 bits"
 #endif /* SVE_SIZE */
@@ -79,7 +79,8 @@ typedef DS(svfloat64_t, svfloat32_t) V;
 #define VDUPH(x) TYPE(svtrn2)(x,x)
 
 #ifdef FFTW_SINGLE
-#define FLIP_RI(x) svreinterpret_f32_u64(svrevw_u64_z(MASKA,svreinterpret_u64_f32(x)))
+//#define FLIP_RI(x) svreinterpret_f32_u64(svrevw_u64_z(MASKA,svreinterpret_u64_f32(x)))
+#define FLIP_RI(x) TYPE(svtrn1)(VDUPH(x),x)
 #else
 #define FLIP_RI(x) TYPE(svtrn1)(VDUPH(x),x)
 #endif
@@ -166,7 +167,7 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   if (ovs==0) { // FIXME: hack for extra_iter hack support
-    v = svreinterpret_f32_f64(vdup_lane_f64(svreinterpret_f64_f32(v),0));
+    v = svreinterpret_f32_f64(svdup_lane_f64(svreinterpret_f64_f32(v),0));
   }
   svuint32_t  gvvl = svindex_u32(0, 1);
   gvvl = svmul_n_u32_z(svptrue_b32(), gvvl, sizeof(R)*ovs);
