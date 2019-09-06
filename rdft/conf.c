@@ -102,4 +102,8 @@ void X(rdft_conf_standard)(planner *p)
 #if HAVE_GENERIC_SIMD256
      X(solvtab_exec)(X(solvtab_rdft_generic_simd256), p);
 #endif
+#if HAVE_R5V
+     if (X(have_simd_r5v)())
+          X(solvtab_exec)(X(solvtab_rdft_r5v), p);
+#endif
 }

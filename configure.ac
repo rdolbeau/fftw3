@@ -235,6 +235,12 @@ if test "$have_generic_simd256" = "yes"; then
 fi
 AM_CONDITIONAL(HAVE_GENERIC_SIMD256, test "$have_generic_simd256" = "yes")
 
+AC_ARG_ENABLE(r5v, [AC_HELP_STRING([--enable-r5v],[enable RISC-V V optimizations])], have_r5v=$enableval, have_r5v=no)
+if test "$have_r5v" = "yes"; then
+        AC_DEFINE(HAVE_R5V,1,[Define to enable RISC-V V optimizations.])
+fi
+AM_CONDITIONAL(HAVE_R5V, test "$have_r5v" = "yes")
+
 
 dnl FIXME:
 dnl AC_ARG_ENABLE(mips-ps, [AC_HELP_STRING([--enable-mips-ps],[enable MIPS pair-single optimizations])], have_mips_ps=$enableval, have_mips_ps=no)
@@ -770,6 +776,7 @@ AC_CONFIG_FILES([
    dft/simd/neon/Makefile
    dft/simd/generic-simd128/Makefile
    dft/simd/generic-simd256/Makefile
+   dft/simd/r5v/Makefile
 
    rdft/Makefile
    rdft/scalar/Makefile
@@ -790,6 +797,7 @@ AC_CONFIG_FILES([
    rdft/simd/neon/Makefile
    rdft/simd/generic-simd128/Makefile
    rdft/simd/generic-simd256/Makefile
+   rdft/simd/r5v/Makefile
 
    reodft/Makefile
 
