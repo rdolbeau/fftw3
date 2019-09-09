@@ -31,11 +31,13 @@
 #ifdef FFTW_SINGLE
 #  define DS(d,s) s /* single-precision option */
 #  define TYPE(name) __builtin_epi_ ## name ## _2xf32
-#  define TYPESUF(name,suf) name ## _f32 ## suf
+#  define TYPEINT(name) __builtin_epi_ ## name ## _2xi32
+#  define TYPEMASK(name) __builtin_epi_ ## name ## _2xf32_mask
 #else /* !FFTW_SINGLE */
 #  define DS(d,s) d /* double-precision option */
 #  define TYPE(name) __builtin_epi_ ## name ## _1xf64
-#  define TYPESUF(name,suf) name ## _f64 ## suf
+#  define TYPEINT(name) __builtin_epi_ ## name ## _1xi64
+#  define TYPEMASK(name) __builtin_epi_ ## name ## _1xf64_mask
 #endif /* FFTW_SINGLE */
 
 #define SIMD_SUFFIX  _r5v  /* for renaming */
@@ -50,21 +52,22 @@
 //#endif
 
 typedef DS(__epi_1xf64, __epi_2xf32) V;
+typedef DS(__epi_1xi64, __epi_2xi32) Vint;
+typedef DS(__epi_1xi1, __epi2xi1) Vmask;
+#define INT2MASK(mask) DS(TYPEINT(cast_1xi1),TYPEINT(cast_2xi1))(mask)
 
 //##define VLIT(re, im) DS(svdupq_n_f64(re,im),svdupq_n_f32(re,im,re,im))
 #ifdef FFTW_SINGLE
-#error "VLIT F32 TODO"
-#else
-static inline V VLIT(const R re, const R im) {
-  __epi_1xi64 idx = __builtin_epi_vid_1xi64(VL); // (0, 1, 2, 3, ...)
-  __epi_1xi64 vone = __builtin_epi_vbroadcast_1xi64(1, 2*VL);
-  __epi_1xf64 vre = __builtin_epi_vbroadcast_1xf64(re, 2*VL);
-  __epi_1xf64 vim = __builtin_epi_vbroadcast_1xf64(im, 2*VL);
-  __epi_1xi64 mask = __builtin_epi_vand_1xi64(idx, vone, 2*VL); // (0, 1, 0, 1, 0, ...)
-  __epi_1xi1 mmask = __builtin_epi_cast_1xi1_1xi64(mask); // idem, as mask
-  return  (__epi_1xf64)__builtin_epi_vmerge_1xi64((__epi_1xi64)vre, (__epi_1xi64)vim, mmask, 2*VL);
-}
+#warning "VLIT F32 perhaps should broadcast 64 bits"
 #endif
+static inline V VLIT(const R re, const R im) {
+  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  V vre = TYPE(vbroadcast)(re, 2*VL);
+  V vim = TYPE(vbroadcast)(im, 2*VL);
+  Vint mask = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, 0, ...)
+  return  (V)TYPEINT(vmerge)((Vint)vre, (Vint)vim, INT2MASK(mask), 2*VL);
+}
 
 #define VLIT1(val) TYPE(vbroadcast)(val, 2*VL)
 #define LDK(x) x
@@ -77,40 +80,31 @@ static inline V VLIT(const R re, const R im) {
 #define VMINUSONE VLIT1(DS(-1.,-1.f))
 
 static inline V VDUPL(const V x) {
-	__epi_1xi64 idx = __builtin_epi_vid_1xi64(VL); // (0, 1, 2, 3, ...)
-	__epi_1xi64 vnotone = __builtin_epi_vbroadcast_1xi64(~1ull, 2*VL);
-	__epi_1xi64 hidx = __builtin_epi_vand_1xi64(idx, vnotone, 2*VL); // (0, 0, 2, 2, ...)
-	return __builtin_epi_vrgather_1xf64(x, hidx, 2*VL);
+	Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+	Vint vnotone = TYPEINT(vbroadcast)(DS(~1ull,~1), 2*VL);
+	Vint hidx = TYPEINT(vand)(idx, vnotone, 2*VL); // (0, 0, 2, 2, ...)
+	return TYPE(vrgather)(x, hidx, 2*VL);
 }
 static inline V VDUPH(const V x) {
-	__epi_1xi64 idx = __builtin_epi_vid_1xi64(VL); // (0, 1, 2, 3, ...)
-	__epi_1xi64 vone = __builtin_epi_vbroadcast_1xi64(1, 2*VL);
-	__epi_1xi64 hidx = __builtin_epi_vor_1xi64(idx, vone, 2*VL); // (1, 1, 3, 3, ...)
-	return __builtin_epi_vrgather_1xf64(x, hidx, 2*VL);
+	Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+	Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+	Vint hidx = TYPEINT(vor)(idx, vone, 2*VL); // (1, 1, 3, 3, ...)
+	return TYPE(vrgather)(x, hidx, 2*VL);
 }
 
-
-#ifdef FFTW_SINGLE
-#error "FLIP_RI F32 TODO"
-#define FLIP_RI(x) svreinterpret_f32_u64(svrevw_u64_z(ALLA,svreinterpret_u64_f32(x)))
-#else
 static inline V FLIP_RI(const V x) {
-	__epi_1xi64 idx = __builtin_epi_vid_1xi64(VL); // (0, 1, 2, 3, ...)
-	__epi_1xi64 vone = __builtin_epi_vbroadcast_1xi64(1, 2*VL);
-	__epi_1xi64 hidx = __builtin_epi_vxor_1xi64(idx, vone, 2*VL); // (1, 0, 3, 2, ...)
-	return __builtin_epi_vrgather_1xf64(x, hidx, 2*VL);
+	Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+	Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+	Vint hidx = TYPEINT(vxor)(idx, vone, 2*VL); // (1, 0, 3, 2, ...)
+	return TYPE(vrgather)(x, hidx, 2*VL);
 }
-#endif
-#ifdef FFTW_SINGLE
-#error "VCONJ F32 TODO"
-#else
+
 static inline V VCONJ(const V x) {
-	__epi_1xi64 idx = __builtin_epi_vid_1xi64(VL); // (0, 1, 2, 3, ...)
-	__epi_1xi64 vone = __builtin_epi_vbroadcast_1xi64(1, 2*VL);
-	__epi_1xi64 hidx = __builtin_epi_vand_1xi64(idx, vone, 2*VL); // (0, 1, 0, 1, 0, 1)
-	return __builtin_epi_vfsgnjn_1xf64_mask(x, x, x, __builtin_epi_cast_1xi1_1xi64(hidx), 2*VL);
+	Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+	Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+	Vint hidx = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, 0, 1)
+	return TYPEMASK(vfsgnjn)(x, x, x, INT2MASK(hidx), 2*VL);
 }
-#endif
 
 /* can probably be done better */
 static inline V VBYI(V x)
@@ -137,11 +131,23 @@ static inline V VBYI(V x)
 
 static inline V VZMUL(V tx, V sr) // fixme: improve
 {
-  V tr = VDUPL(tx);
-  V ti = VDUPH(tx);
-  tr = VMUL(sr, tr);
-  sr = VBYI(sr);
-  return VFMA(ti, sr, tr);
+  V tr;
+  V ti;
+  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+  Vint vnotone = TYPEINT(vbroadcast)(~1ull, 2*VL);
+  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  Vint hidx;
+	
+  hidx = TYPEINT(vand)(idx, vnotone, 2*VL); // (0, 0, 2, 2, ...)
+  tr = TYPE(vrgather)(tx, hidx, 2*VL); // Real, Real of tx
+  hidx = TYPEINT(vor)(idx, vone, 2*VL); // (1, 1, 3, 3, ...)  // could be hidx + vone, ...
+  ti = TYPE(vrgather)(tx, hidx, 2*VL); // Imag, Imag of tx
+  tr = TYPE(vfmul)(sr,tr,2*VL); // (Real, Real)[tx] * (Real,Imag)[sr]
+  hidx = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, 0, 1)
+  sr = TYPEMASK(vfsgnjn)(sr, sr, sr, INT2MASK(hidx), 2*VL); // conjugate of sr
+  hidx = TYPEINT(vxor)(idx, vone, 2*VL); // (1, 0, 3, 2, ...)
+  sr = TYPE(vrgather)(sr, hidx, 2*VL); // Imag, Real of (conjugate of) sr
+  return TYPE(vfmacc)(tr,ti,sr,2*VL); // (-Imag, Real)[sr] * (Imag, Imag)[tx] + (Real, Real)[tx] * (Real,Imag)[sr]
 }
 
 static inline V VZMULJ(V tx, V sr) // fixme: improve
@@ -215,30 +221,30 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
-  __epi_1xi64 idx = __builtin_epi_vid_1xi64(VL); // (0, 1, 2, 3, ...)
-  __epi_1xi64 vone = __builtin_epi_vbroadcast_1xi64(1, 2*VL);
-  __epi_1xi64 hidx = __builtin_epi_vsrl_1xi64(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = __builtin_epi_vmul_1xi64(hidx, __builtin_epi_vbroadcast_1xi64(sizeof(R)*ivs, 2*VL), 2*VL);
-  __epi_1xi64 idx2 = __builtin_epi_vand_1xi64(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
-  __epi_1xi64 hidx2 = __builtin_epi_vmul_1xi64(idx2, __builtin_epi_vbroadcast_1xi64(sizeof(R), 2*VL), 2*VL);
-  hidx = __builtin_epi_vadd_1xi64(hidx, hidx2, 2*VL);
-  return __builtin_epi_vload_indexed_1xf64(x, hidx, 2*VL);
+  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT(vmul)(hidx, TYPEINT(vbroadcast)(sizeof(R)*ivs, 2*VL), 2*VL);
+  Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
+  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vbroadcast)(sizeof(R), 2*VL), 2*VL);
+  hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
+  return TYPE(vload_indexed)(x, hidx, 2*VL);
 }
 
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  __epi_1xi64 idx = __builtin_epi_vid_1xi64(VL); // (0, 1, 2, 3, ...)
-  __epi_1xi64 vone = __builtin_epi_vbroadcast_1xi64(1, 2*VL);
-  __epi_1xi64 idx2 = __builtin_epi_vand_1xi64(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
+  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
   if (ovs==0) { // FIXME: hack for extra_iter hack support
-    v = __builtin_epi_vrgather_1xf64(v, idx2, 2*VL);
+    v = TYPE(vrgather)(v, idx2, 2*VL);
   }
-  __epi_1xi64 hidx = __builtin_epi_vsrl_1xi64(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = __builtin_epi_vmul_1xi64(hidx, __builtin_epi_vbroadcast_1xi64(sizeof(R)*ovs, 2*VL), 2*VL);
-  __epi_1xi64 hidx2 = __builtin_epi_vmul_1xi64(idx2, __builtin_epi_vbroadcast_1xi64(sizeof(R), 2*VL), 2*VL);
-  hidx = __builtin_epi_vadd_1xi64(hidx, hidx2, 2*VL);
-  __builtin_epi_vstore_indexed_1xf64(x, v, hidx, 2*VL);
+  Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT(vmul)(hidx, TYPEINT(vbroadcast)(sizeof(R)*ovs, 2*VL), 2*VL);
+  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vbroadcast)(sizeof(R), 2*VL), 2*VL);
+  hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
+  TYPE(vstore_indexed)(x, v, hidx, 2*VL);
 }
 
 #endif /* FFTW_SINGLE */
@@ -254,9 +260,9 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
-  __epi_2xi32 idx = __builtin_epi_vid_2xi32(VL); // (0, 1, 2, 3, ...)
-  __epi_2xi32 hidx = __builtin_epi_vmul_2xi32(idx, __builtin_epi_vbroadcast_2xi32(sizeof(R)*ovs, 2*VL), 2*VL);
-  __builtin_epi_vstore_indexed_2xf32(x, v, hidx, 2*VL);
+  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+  Vint hidx = TYPEINT(vmul)(idx, TYPEINT(vbroadcast)(sizeof(R)*ovs, 2*VL), 2*VL);
+  TYPE(vstore_indexed)(x, v, hidx, 2*VL);
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
 #else /* !FFTW_SINGLE */
@@ -267,9 +273,9 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
-  __epi_1xi64 idx = __builtin_epi_vid_1xi64(VL); // (0, 1, 2, 3, ...)
-  __epi_1xi64 hidx = __builtin_epi_vmul_1xi64(idx, __builtin_epi_vbroadcast_1xi64(sizeof(R)*ovs, 2*VL), 2*VL);
-  __builtin_epi_vstore_indexed_1xf64(x, v, hidx, 2*VL);
+  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+  Vint hidx = TYPEINT(vmul)(idx, TYPEINT(vbroadcast)(sizeof(R)*ovs, 2*VL), 2*VL);
+  TYPE(vstore_indexed)(x, v, hidx, 2*VL);
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
 #endif /* FFTW_SINGLE */
