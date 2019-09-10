@@ -53,7 +53,7 @@
 
 typedef DS(__epi_1xf64, __epi_2xf32) V;
 typedef DS(__epi_1xi64, __epi_2xi32) Vint;
-typedef DS(__epi_1xi1, __epi2xi1) Vmask;
+typedef DS(__epi_1xi1, __epi_2xi1) Vmask;
 #define INT2MASK(mask) DS(TYPEINT(cast_1xi1),TYPEINT(cast_2xi1))(mask)
 
 //##define VLIT(re, im) DS(svdupq_n_f64(re,im),svdupq_n_f32(re,im,re,im))
@@ -134,7 +134,7 @@ static inline V VZMUL(V tx, V sr) // fixme: improve
   V tr;
   V ti;
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vnotone = TYPEINT(vbroadcast)(~1ull, 2*VL);
+  Vint vnotone = TYPEINT(vbroadcast)(DS(~1ull,~1), 2*VL);
   Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
   Vint hidx;
 	
@@ -189,37 +189,41 @@ static inline void STA(R *x, V v, INT ovs, const R *aligned_like) {
 }
 
 #if FFTW_SINGLE
+#warning "Should be optimized with strided 64 bits access"
 
 static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  svuint32_t  gvvl = svindex_u32(0, 1);
-  gvvl = svmul_n_u32_z(svptrue_b32(), gvvl, sizeof(R)*ivs);
-  gvvl = svzip1_u32(gvvl, gvvl);
-  gvvl = svadd_u32_z(svptrue_b32(), gvvl, svdupq_n_u32(0,sizeof(R),0,sizeof(R)));
-  
-  return svld1_gather_u32offset_f32(ALLA, x, gvvl);
+  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT(vmul)(hidx, TYPEINT(vbroadcast)(sizeof(R)*ivs, 2*VL), 2*VL);
+  Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
+  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vbroadcast)(sizeof(R), 2*VL), 2*VL);
+  hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
+  return TYPE(vload_indexed)(x, hidx, 2*VL);
 }
 
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
+  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
   if (ovs==0) { // FIXME: hack for extra_iter hack support
-    v = svreinterpret_f32_f64(vdup_lane_f64(svreinterpret_f64_f32(v),0));
+    v = TYPE(vrgather)(v, idx2, 2*VL);
   }
-  svuint32_t  gvvl = svindex_u32(0, 1);
-  gvvl = svmul_n_u32_z(svptrue_b32(), gvvl, sizeof(R)*ovs);
-  gvvl = svzip1_u32(gvvl, gvvl);
-  gvvl = svadd_u32_z(svptrue_b32(), gvvl, svdupq_n_u32(0,sizeof(R),0,sizeof(R)));
-
-  svst1_scatter_u32offset_f32(ALLA, x, gvvl, v);
+  Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT(vmul)(hidx, TYPEINT(vbroadcast)(sizeof(R)*ovs, 2*VL), 2*VL);
+  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vbroadcast)(sizeof(R), 2*VL), 2*VL);
+  hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
+  TYPE(vstore_indexed)(x, v, hidx, 2*VL);
 }
 
 #else /* !FFTW_SINGLE */
 
 static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
-  (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
   Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
