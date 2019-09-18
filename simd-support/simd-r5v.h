@@ -2,7 +2,7 @@
  * Copyright (c) 2003, 2007-11 Matteo Frigo
  * Copyright (c) 2003, 2007-11 Massachusetts Institute of Technology
  *
- * RISC-V V support implemented by Romain Dolbeau. (c) 2017 Romain Dolbeau
+ * RISC-V V support implemented by Romain Dolbeau. (c) 2019 Romain Dolbeau
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,10 +40,27 @@
 #  define TYPEMASK(name) __builtin_epi_ ## name ## _1xf64_mask
 #endif /* FFTW_SINGLE */
 
-#define SIMD_SUFFIX  _r5v  /* for renaming */
 /* FIXME: this hardwire to 512 bits */
-#define R5V_SIZE 512
+#if R5V_SIZE == 16384
+#define VL DS(128, 256)        /* SIMD complex vector length */
+#elif R5V_SIZE == 8192
+#define VL DS(64, 128)        /* SIMD complex vector length */
+#elif R5V_SIZE == 4096
+#define VL DS(32, 64)        /* SIMD complex vector length */
+#elif R5V_SIZE == 2048
+#define VL DS(16, 32)        /* SIMD complex vector length */
+#elif R5V_SIZE == 1024
+#define VL DS(8, 16)        /* SIMD complex vector length */
+#elif R5V_SIZE == 512
 #define VL DS(4, 8)        /* SIMD complex vector length */
+#elif R5V_SIZE == 256
+#define VL DS(2, 4)        /* SIMD complex vector length */
+#elif R5V_SIZE == 128
+#define VL DS(1, 2)        /* SIMD complex vector length */
+#else /* R5V_SIZE */
+#error "R5V_SIZE must be a power of 2 between 128 and 16384 bits"
+#endif /* R5V_SIZE */
+
 #define SIMD_VSTRIDE_OKA(x) ((x) == 2) 
 #define SIMD_STRIDE_OKPAIR SIMD_STRIDE_OK
 
@@ -285,6 +302,13 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 #endif /* FFTW_SINGLE */
 
 /* twiddle storage #1: compact, slower */
+#define REQ_VTW1
+#define VTW_SIZE VL
+#include "vtw.h"
+#define TWVL1 (VL)
+#undef VTW_SIZE
+#undef REQ_VTW1
+#if 0
 #if R5V_SIZE == 512
 #ifdef FFTW_SINGLE
 # define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}, \
@@ -303,6 +327,7 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 #else /* R5V_SIZE */
 #error "R5V_SIZE must be 256 or 512 bits"
 #endif /* R5V_SIZE */
+#endif
 
 
 static inline V BYTW1(const R *t, V sr)
@@ -316,6 +341,13 @@ static inline V BYTWJ1(const R *t, V sr)
 }
 
 /* twiddle storage #2: twice the space, faster (when in cache) */
+#define REQ_VTW2
+#define VTW_SIZE (2*VL)
+#include "vtw.h"
+#define TWVL2 (2*VL)
+#undef VTW_SIZE
+#undef REQ_VTW2
+#if 0
 #if R5V_SIZE == 512
 #ifdef FFTW_SINGLE
 # define VTW2(v,x)							     \
@@ -351,6 +383,7 @@ static inline V BYTWJ1(const R *t, V sr)
 #else /* R5V_SIZE */
 #error "R5V_SIZE must be 256 or 512 bits"
 #endif /* R5V_SIZE */
+#endif
 
 static inline V BYTW2(const R *t, V sr)
 {
@@ -373,6 +406,13 @@ static inline V BYTWJ2(const R *t, V sr)
 #define TWVL3 TWVL1
 
 /* twiddle storage for split arrays */
+#define REQ_VTWS
+#define VTW_SIZE (2*VL)
+#include "vtw.h"
+#define TWVLS (2*VL)
+#undef VTW_SIZE
+#undef REQ_VTWS
+#if 0
 #if R5V_SIZE == 512
 #ifdef FFTW_SINGLE
 # define VTWS(v,x)                                                            \
@@ -407,6 +447,7 @@ static inline V BYTWJ2(const R *t, V sr)
 #define TWVLS (2 * VL)
 #else /* R5V_SIZE */
 #error "R5V_SIZE must be 256 or 512 bits"
+#endif
 #endif
 
 
