@@ -23,8 +23,8 @@
 
 #if HAVE_R5V
 /* don't know how to autodetect R5V; assume it is present */
-  int X(have_simd_r5v)(void)
+  int X(have_simd_r5v)(int rs)
   {
-       return 1;
+    return __builtin_epi_vsetvl(rs/64, __epi_e64, __epi_m1) >= (rs/64);
   }
 #endif
