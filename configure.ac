@@ -782,6 +782,7 @@ AC_CONFIG_FILES([
    dft/simd/sve256/Makefile
    dft/simd/sve512/Makefile
    dft/simd/sve1024/Makefile
+   dft/simd/sve2048/Makefile
    dft/simd/generic-simd128/Makefile
    dft/simd/generic-simd256/Makefile
 
@@ -806,6 +807,7 @@ AC_CONFIG_FILES([
    rdft/simd/sve256/Makefile
    rdft/simd/sve512/Makefile
    rdft/simd/sve1024/Makefile
+   rdft/simd/sve2048/Makefile
    rdft/simd/generic-simd128/Makefile
    rdft/simd/generic-simd256/Makefile
 

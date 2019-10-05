@@ -88,6 +88,8 @@ void X(dft_conf_standard)(planner *p)
           X(solvtab_exec)(X(solvtab_dft_sve512), p);
      if (X(have_simd_sve)(1024))
           X(solvtab_exec)(X(solvtab_dft_sve1024), p);
+     if (X(have_simd_sve)(2048))
+          X(solvtab_exec)(X(solvtab_dft_sve2048), p);
 #endif
 #if HAVE_GENERIC_SIMD128
      X(solvtab_exec)(X(solvtab_dft_generic_simd128), p);

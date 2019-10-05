@@ -41,7 +41,10 @@
 #endif /* FFTW_SINGLE */
 
 //#define SIMD_SUFFIX  _sve  /* for renaming */
-#if SVE_SIZE == 1024
+#if SVE_SIZE == 2048
+#define VL DS(16, 32)        /* SIMD complex vector length */
+#define MASKA DS(svptrue_pat_b64(SV_VL32),svptrue_pat_b32(SV_VL64))
+#elif SVE_SIZE == 1024
 #define VL DS(8, 16)        /* SIMD complex vector length */
 #define MASKA DS(svptrue_pat_b64(SV_VL16),svptrue_pat_b32(SV_VL32))
 #elif SVE_SIZE == 512
@@ -54,7 +57,7 @@
 #define VL DS(1, 2)        /* SIMD complex vector length */
 #define MASKA DS(svptrue_pat_b64(SV_VL2),svptrue_pat_b32(SV_VL4))
 #else /* SVE_SIZE */
-#error "SVE_SIZE must be 128, 256, 512 or 1024 bits"
+#error "SVE_SIZE must be 128, 256, 512, 1024, 2048 bits"
 #endif /* SVE_SIZE */
 #define SIMD_VSTRIDE_OKA(x) ((x) == 2) 
 #define SIMD_STRIDE_OKPAIR SIMD_STRIDE_OK
