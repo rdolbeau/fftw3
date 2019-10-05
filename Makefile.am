@@ -101,7 +101,9 @@ rdft/simd/sve128/librdft_sve128_codelets.la \
 dft/simd/sve256/libdft_sve256_codelets.la       \
 rdft/simd/sve256/librdft_sve256_codelets.la \
 dft/simd/sve512/libdft_sve512_codelets.la       \
-rdft/simd/sve512/librdft_sve512_codelets.la
+rdft/simd/sve512/librdft_sve512_codelets.la	\
+dft/simd/sve1024/libdft_sve1024_codelets.la       \
+rdft/simd/sve1024/librdft_sve1024_codelets.la
 endif
 
 

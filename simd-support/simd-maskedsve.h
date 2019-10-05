@@ -41,7 +41,10 @@
 #endif /* FFTW_SINGLE */
 
 //#define SIMD_SUFFIX  _sve  /* for renaming */
-#if SVE_SIZE == 512
+#if SVE_SIZE == 1024
+#define VL DS(8, 16)        /* SIMD complex vector length */
+#define MASKA DS(svptrue_pat_b64(SV_VL16),svptrue_pat_b32(SV_VL32))
+#elif SVE_SIZE == 512
 #define VL DS(4, 8)        /* SIMD complex vector length */
 #define MASKA DS(svptrue_pat_b64(SV_VL8),svptrue_pat_b32(SV_VL16))
 #elif SVE_SIZE == 256
@@ -51,7 +54,7 @@
 #define VL DS(1, 2)        /* SIMD complex vector length */
 #define MASKA DS(svptrue_pat_b64(SV_VL2),svptrue_pat_b32(SV_VL4))
 #else /* SVE_SIZE */
-#error "SVE_SIZE must be 128, 256 or 512 bits"
+#error "SVE_SIZE must be 128, 256, 512 or 1024 bits"
 #endif /* SVE_SIZE */
 #define SIMD_VSTRIDE_OKA(x) ((x) == 2) 
 #define SIMD_STRIDE_OKPAIR SIMD_STRIDE_OK
@@ -241,7 +244,25 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 #endif /* FFTW_SINGLE */
 
 /* twiddle storage #1: compact, slower */
-#if SVE_SIZE == 512
+#define REQ_VTW1
+#define VTW_SIZE VL
+#include "vtw.h"
+#define TWVL1 (VL)
+#undef VTW_SIZE
+#undef REQ_VTW1
+#if 0
+#if SVE_SIZE == 1024
+#ifdef FFTW_SINGLE
+# define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}, \
+                   {TW_CEXP, v+4, x}, {TW_CEXP, v+5, x}, {TW_CEXP, v+6, x}, {TW_CEXP, v+7, x}, \
+                   {TW_CEXP, v+8, x}, {TW_CEXP, v+9, x}, {TW_CEXP, v+10, x}, {TW_CEXP, v+11, x}, \
+                   {TW_CEXP, v+12, x}, {TW_CEXP, v+13, x}, {TW_CEXP, v+14, x}, {TW_CEXP, v+15, x}
+#else /* !FFTW_SINGLE */
+# define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}, \
+                   {TW_CEXP, v+4, x}, {TW_CEXP, v+5, x}, {TW_CEXP, v+6, x}, {TW_CEXP, v+7, x}
+#endif /* FFTW_SINGLE */
+#define TWVL1 (VL)
+#elif SVE_SIZE == 512
 #ifdef FFTW_SINGLE
 # define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}, \
                    {TW_CEXP, v+4, x}, {TW_CEXP, v+5, x}, {TW_CEXP, v+6, x}, {TW_CEXP, v+7, x}
@@ -264,8 +285,9 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 #endif /* FFTW_SINGLE */
 #define TWVL1 (VL)
 #else /* SVE_SIZE */
-#error "SVE_SIZE must be 128, 256 or 512 bits"
+#error "SVE_SIZE must be 128, 256, 512 or 1024 bits"
 #endif /* SVE_SIZE */
+#endif
 
 
 static inline V BYTW1(const R *t, V sr)
@@ -279,7 +301,45 @@ static inline V BYTWJ1(const R *t, V sr)
 }
 
 /* twiddle storage #2: twice the space, faster (when in cache) */
-#if SVE_SIZE == 512
+#define REQ_VTW2
+#define VTW_SIZE (2*VL)
+#include "vtw.h"
+#define TWVL2 (2*VL)
+#undef VTW_SIZE
+#undef REQ_VTW2
+#if 0
+#if SVE_SIZE == 1024
+#ifdef FFTW_SINGLE
+# define VTW2(v,x)							     \
+   {TW_COS, v  ,  x}, {TW_COS, v  , x}, {TW_COS, v+1,  x}, {TW_COS, v+1, x}, \
+   {TW_COS, v+2,  x}, {TW_COS, v+2, x}, {TW_COS, v+3,  x}, {TW_COS, v+3, x}, \
+   {TW_COS, v+4,  x}, {TW_COS, v+4, x}, {TW_COS, v+5,  x}, {TW_COS, v+5, x}, \
+   {TW_COS, v+6,  x}, {TW_COS, v+6, x}, {TW_COS, v+7,  x}, {TW_COS, v+7, x}, \
+   {TW_COS, v+8,  x}, {TW_COS, v+8, x}, {TW_COS, v+9,  x}, {TW_COS, v+9, x}, \
+   {TW_COS, v+10,  x}, {TW_COS, v+10, x}, {TW_COS, v+11,  x}, {TW_COS, v+11, x}, \
+   {TW_COS, v+12,  x}, {TW_COS, v+12, x}, {TW_COS, v+13,  x}, {TW_COS, v+13, x}, \
+   {TW_COS, v+14,  x}, {TW_COS, v+14, x}, {TW_COS, v+15,  x}, {TW_COS, v+15, x}, \
+   {TW_SIN, v  , -x}, {TW_SIN, v  , x}, {TW_SIN, v+1, -x}, {TW_SIN, v+1, x}, \
+   {TW_SIN, v+2, -x}, {TW_SIN, v+2, x}, {TW_SIN, v+3, -x}, {TW_SIN, v+3, x}, \
+   {TW_SIN, v+4, -x}, {TW_SIN, v+4, x}, {TW_SIN, v+5, -x}, {TW_SIN, v+5, x}, \
+   {TW_SIN, v+6, -x}, {TW_SIN, v+6, x}, {TW_SIN, v+7, -x}, {TW_SIN, v+7, x}, \
+   {TW_SIN, v+8 , -x}, {TW_SIN, v+8 , x}, {TW_SIN, v+9, -x}, {TW_SIN, v+9, x}, \
+   {TW_SIN, v+10, -x}, {TW_SIN, v+10, x}, {TW_SIN, v+11, -x}, {TW_SIN, v+11, x}, \
+   {TW_SIN, v+12, -x}, {TW_SIN, v+12, x}, {TW_SIN, v+13, -x}, {TW_SIN, v+13, x}, \
+   {TW_SIN, v+14, -x}, {TW_SIN, v+14, x}, {TW_SIN, v+15, -x}, {TW_SIN, v+15, x}
+#else /* !FFTW_SINGLE */
+# define VTW2(v,x)							     \
+   {TW_COS, v  ,  x}, {TW_COS, v  , x}, {TW_COS, v+1,  x}, {TW_COS, v+1, x}, \
+   {TW_COS, v+2,  x}, {TW_COS, v+2, x}, {TW_COS, v+3,  x}, {TW_COS, v+3, x}, \
+   {TW_COS, v+4,  x}, {TW_COS, v+4, x}, {TW_COS, v+5,  x}, {TW_COS, v+5, x}, \
+   {TW_COS, v+6,  x}, {TW_COS, v+6, x}, {TW_COS, v+7,  x}, {TW_COS, v+7, x}, \
+   {TW_SIN, v  , -x}, {TW_SIN, v  , x}, {TW_SIN, v+1, -x}, {TW_SIN, v+1, x}, \
+   {TW_SIN, v+2, -x}, {TW_SIN, v+2, x}, {TW_SIN, v+3, -x}, {TW_SIN, v+3, x}, \
+   {TW_SIN, v+4, -x}, {TW_SIN, v+4, x}, {TW_SIN, v+5, -x}, {TW_SIN, v+5, x}, \
+   {TW_SIN, v+6, -x}, {TW_SIN, v+6, x}, {TW_SIN, v+7, -x}, {TW_SIN, v+7, x}
+#endif /* FFTW_SINGLE */
+#define TWVL2 (2 * VL)
+#elif SVE_SIZE == 512
 #ifdef FFTW_SINGLE
 # define VTW2(v,x)							     \
    {TW_COS, v  ,  x}, {TW_COS, v  , x}, {TW_COS, v+1,  x}, {TW_COS, v+1, x}, \
@@ -322,8 +382,9 @@ static inline V BYTWJ1(const R *t, V sr)
 #endif /* FFTW_SINGLE */
 #define TWVL2 (2 * VL)
 #else /* SVE_SIZE */
-#error "SVE_SIZE must be 128, 256 or 512 bits"
+#error "SVE_SIZE must be 128, 256, 512 or 1024 bits"
 #endif /* SVE_SIZE */
+#endif
 
 static inline V BYTW2(const R *t, V sr)
 {
@@ -346,7 +407,45 @@ static inline V BYTWJ2(const R *t, V sr)
 #define TWVL3 TWVL1
 
 /* twiddle storage for split arrays */
-#if SVE_SIZE == 512
+#define REQ_VTWS
+#define VTW_SIZE (2*VL)
+#include "vtw.h"
+#define TWVLS (2*VL)
+#undef VTW_SIZE
+#undef REQ_VTWS
+#if 0
+#if SVE_SIZE == 1024
+#ifdef FFTW_SINGLE
+# define VTWS(v,x)                                                            \
+  {TW_COS, v   , x}, {TW_COS, v+1 , x}, {TW_COS, v+2 , x}, {TW_COS, v+3 , x}, \
+  {TW_COS, v+4 , x}, {TW_COS, v+5 , x}, {TW_COS, v+6 , x}, {TW_COS, v+7 , x}, \
+  {TW_COS, v+8 , x}, {TW_COS, v+9 , x}, {TW_COS, v+10, x}, {TW_COS, v+11, x}, \
+  {TW_COS, v+12, x}, {TW_COS, v+13, x}, {TW_COS, v+14, x}, {TW_COS, v+15, x}, \
+  {TW_COS, v+16, x}, {TW_COS, v+17, x}, {TW_COS, v+18, x}, {TW_COS, v+19, x}, \
+  {TW_COS, v+20, x}, {TW_COS, v+21, x}, {TW_COS, v+22, x}, {TW_COS, v+23, x}, \
+  {TW_COS, v+24, x}, {TW_COS, v+25, x}, {TW_COS, v+26, x}, {TW_COS, v+27, x}, \
+  {TW_COS, v+28, x}, {TW_COS, v+29, x}, {TW_COS, v+30, x}, {TW_COS, v+31, x}, \
+  {TW_SIN, v   , x}, {TW_SIN, v+1 , x}, {TW_SIN, v+2 , x}, {TW_SIN, v+3 , x}, \
+  {TW_SIN, v+4 , x}, {TW_SIN, v+5 , x}, {TW_SIN, v+6 , x}, {TW_SIN, v+7 , x}, \
+  {TW_SIN, v+8 , x}, {TW_SIN, v+9 , x}, {TW_SIN, v+10, x}, {TW_SIN, v+11, x}, \
+  {TW_SIN, v+12, x}, {TW_SIN, v+13, x}, {TW_SIN, v+14, x}, {TW_SIN, v+15, x}, \
+  {TW_SIN, v+16, x}, {TW_SIN, v+17, x}, {TW_SIN, v+18, x}, {TW_SIN, v+19, x}, \
+  {TW_SIN, v+20, x}, {TW_SIN, v+21, x}, {TW_SIN, v+22, x}, {TW_SIN, v+23, x}, \
+  {TW_SIN, v+24, x}, {TW_SIN, v+25, x}, {TW_SIN, v+26, x}, {TW_SIN, v+27, x}, \
+  {TW_SIN, v+28, x}, {TW_SIN, v+29, x}, {TW_SIN, v+30, x}, {TW_SIN, v+31, x}
+#else /* !FFTW_SINGLE */
+# define VTWS(v,x)                                                            \
+  {TW_COS, v   , x}, {TW_COS, v+1 , x}, {TW_COS, v+2 , x}, {TW_COS, v+3 , x}, \
+  {TW_COS, v+4 , x}, {TW_COS, v+5 , x}, {TW_COS, v+6 , x}, {TW_COS, v+7 , x}, \
+  {TW_COS, v+8 , x}, {TW_COS, v+9 , x}, {TW_COS, v+10, x}, {TW_COS, v+11, x}, \
+  {TW_COS, v+12, x}, {TW_COS, v+13, x}, {TW_COS, v+14, x}, {TW_COS, v+15, x}, \
+  {TW_SIN, v   , x}, {TW_SIN, v+1 , x}, {TW_SIN, v+2 , x}, {TW_SIN, v+3 , x}, \
+  {TW_SIN, v+4 , x}, {TW_SIN, v+5 , x}, {TW_SIN, v+6 , x}, {TW_SIN, v+7 , x}, \
+  {TW_SIN, v+8 , x}, {TW_SIN, v+9 , x}, {TW_SIN, v+10, x}, {TW_SIN, v+11, x}, \
+  {TW_SIN, v+12, x}, {TW_SIN, v+13, x}, {TW_SIN, v+14, x}, {TW_SIN, v+15, x}
+#endif /* FFTW_SINGLE */
+#define TWVLS (2 * VL)
+#elif SVE_SIZE == 512
 #ifdef FFTW_SINGLE
 # define VTWS(v,x)                                                            \
   {TW_COS, v   , x}, {TW_COS, v+1 , x}, {TW_COS, v+2 , x}, {TW_COS, v+3 , x}, \
@@ -389,7 +488,8 @@ static inline V BYTWJ2(const R *t, V sr)
 #endif /* FFTW_SINGLE */
 #define TWVLS (2 * VL)
 #else /* SVE_SIZE */
-#error "SVE_SIZE must be 128, 256 or 512 bits"
+#error "SVE_SIZE must be 128, 256, 512 or 1024 bits"
+#endif
 #endif
 
 
