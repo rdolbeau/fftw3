@@ -138,8 +138,7 @@ static inline V VBYI(V x)
 #define VMUL(a,b) TYPE(vfmul)(a,b,2*VL)
 #define VFMA(a, b, c)  TYPE(vfmacc)(c,a,b,2*VL) // or vfmadd
 #define VFMS(a, b, c)  TYPE(vfmsac)(c,a,b,2*VL)
-//#define VFNMS(a, b, c) TYPE(vfnmsac)(c,a,b,2*VL)  // or vfnmsub
-#define VFNMS(a, b, c) VNEG(VFMS(a, b, c)) // workaround until vfmsac is implemented
+#define VFNMS(a, b, c) TYPE(vfnmsac)(c,a,b,2*VL)  // or vfnmsub
 #define VFMAI(b, c) VADD(c, VBYI(b)) // fixme: improve
 #define VFNMSI(b, c) VSUB(c, VBYI(b)) // fixme: improve
 #define VFMACONJ(b,c)  VADD(VCONJ(b),c) // fixme: improve
