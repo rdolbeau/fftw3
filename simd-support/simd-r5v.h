@@ -79,14 +79,14 @@ typedef DS(__epi_1xi1, __epi_2xi1) Vmask;
 #endif
 static inline V VLIT(const R re, const R im) {
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
-  V vre = TYPE(vbroadcast)(re, 2*VL);
-  V vim = TYPE(vbroadcast)(im, 2*VL);
+  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
+  V vre = TYPE(vfmv_v_f)(re, 2*VL);
+  V vim = TYPE(vfmv_v_f)(im, 2*VL);
   Vint mask = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, 0, ...)
   return  (V)TYPEINT(vmerge)((Vint)vre, (Vint)vim, INT2MASK(mask), 2*VL);
 }
 
-#define VLIT1(val) TYPE(vbroadcast)(val, 2*VL)
+#define VLIT1(val) TYPE(vfmv_v_f)(val, 2*VL)
 #define LDK(x) x
 #define DVK(var, val) V var = VLIT1(val)
 #define VZERO VLIT1(DS(0.,0.f))
@@ -98,27 +98,27 @@ static inline V VLIT(const R re, const R im) {
 
 static inline V VDUPL(const V x) {
 	Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-	Vint vnotone = TYPEINT(vbroadcast)(DS(~1ull,~1), 2*VL);
+	Vint vnotone = TYPEINT(vmv_v_x)(DS(~1ull,~1), 2*VL);
 	Vint hidx = TYPEINT(vand)(idx, vnotone, 2*VL); // (0, 0, 2, 2, ...)
 	return TYPE(vrgather)(x, hidx, 2*VL);
 }
 static inline V VDUPH(const V x) {
 	Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-	Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+	Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
 	Vint hidx = TYPEINT(vor)(idx, vone, 2*VL); // (1, 1, 3, 3, ...)
 	return TYPE(vrgather)(x, hidx, 2*VL);
 }
 
 static inline V FLIP_RI(const V x) {
 	Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-	Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+	Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
 	Vint hidx = TYPEINT(vxor)(idx, vone, 2*VL); // (1, 0, 3, 2, ...)
 	return TYPE(vrgather)(x, hidx, 2*VL);
 }
 
 static inline V VCONJ(const V x) {
 	Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-	Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+	Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
 	Vint hidx = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, 0, 1)
 	return TYPEMASK(vfsgnjn)(x, x, x, INT2MASK(hidx), 2*VL);
 }
@@ -150,8 +150,8 @@ static inline V VZMUL(V tx, V sr) // fixme: improve
   V tr;
   V ti;
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vnotone = TYPEINT(vbroadcast)(DS(~1ull,~1), 2*VL);
-  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  Vint vnotone = TYPEINT(vmv_v_x)(DS(~1ull,~1), 2*VL);
+  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
   Vint hidx;
 	
   hidx = TYPEINT(vand)(idx, vnotone, 2*VL); // (0, 0, 2, 2, ...)
@@ -211,11 +211,11 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
   Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul)(hidx, TYPEINT(vbroadcast)(sizeof(R)*ivs, 2*VL), 2*VL);
+  hidx = TYPEINT(vmul)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ivs, 2*VL), 2*VL);
   Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
-  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vbroadcast)(sizeof(R), 2*VL), 2*VL);
+  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
   hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
   return TYPE(vload_indexed)(x, hidx, 2*VL);
 }
@@ -224,14 +224,14 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
   Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
   if (ovs==0) { // FIXME: hack for extra_iter hack support
     v = TYPE(vrgather)(v, idx2, 2*VL);
   }
   Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul)(hidx, TYPEINT(vbroadcast)(sizeof(R)*ovs, 2*VL), 2*VL);
-  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vbroadcast)(sizeof(R), 2*VL), 2*VL);
+  hidx = TYPEINT(vmul)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
+  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
   hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
   TYPE(vstore_indexed)(x, v, hidx, 2*VL);
 }
@@ -242,11 +242,11 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
   Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul)(hidx, TYPEINT(vbroadcast)(sizeof(R)*ivs, 2*VL), 2*VL);
+  hidx = TYPEINT(vmul)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ivs, 2*VL), 2*VL);
   Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
-  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vbroadcast)(sizeof(R), 2*VL), 2*VL);
+  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
   hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
   return TYPE(vload_indexed)(x, hidx, 2*VL);
 }
@@ -255,14 +255,14 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vbroadcast)(1, 2*VL);
+  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
   Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
   if (ovs==0) { // FIXME: hack for extra_iter hack support
     v = TYPE(vrgather)(v, idx2, 2*VL);
   }
   Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul)(hidx, TYPEINT(vbroadcast)(sizeof(R)*ovs, 2*VL), 2*VL);
-  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vbroadcast)(sizeof(R), 2*VL), 2*VL);
+  hidx = TYPEINT(vmul)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
+  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
   hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
   TYPE(vstore_indexed)(x, v, hidx, 2*VL);
 }
@@ -281,7 +281,7 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint hidx = TYPEINT(vmul)(idx, TYPEINT(vbroadcast)(sizeof(R)*ovs, 2*VL), 2*VL);
+  Vint hidx = TYPEINT(vmul)(idx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
   TYPE(vstore_indexed)(x, v, hidx, 2*VL);
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
@@ -294,7 +294,7 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint hidx = TYPEINT(vmul)(idx, TYPEINT(vbroadcast)(sizeof(R)*ovs, 2*VL), 2*VL);
+  Vint hidx = TYPEINT(vmul)(idx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
   TYPE(vstore_indexed)(x, v, hidx, 2*VL);
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
