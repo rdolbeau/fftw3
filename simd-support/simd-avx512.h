@@ -56,7 +56,7 @@
 
 typedef DS(__m512d, __m512) V;
 
-#define VLIT(re, im) DS(SUFF(_mm512_setr)(im, re, im, re, im, re, im, re),SUFF(_mm512_setr)(im, re, im, re, im, re, im, re, im, re, im, re, im, re, im, re))
+#define VLIT(re, im) DS(SUFF(_mm512_setr)(re, im, re, im, re, im, re, im),SUFF(_mm512_setr)(re, im, re, im, re, im, re, im, re, im, re, im, re, im, re, im))
 #define VLIT1(val) SUFF(_mm512_set1)(val)
 #define LDK(x) x
 #define DVK(var, val) V var = VLIT1(val)

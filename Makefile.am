@@ -71,7 +71,9 @@ endif
 
 if HAVE_AVX512
 AVX512_LIBS = dft/simd/avx512/libdft_avx512_codelets.la	\
-rdft/simd/avx512/librdft_avx512_codelets.la
+rdft/simd/avx512/librdft_avx512_codelets.la \
+dft/simd/avx512split/libdft_avx512split_codelets.la \
+rdft/simd/avx512split/librdft_avx512split_codelets.la
 endif
 
 if HAVE_KCVI

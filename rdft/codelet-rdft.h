@@ -141,6 +141,7 @@ extern const solvtab X(solvtab_rdft_avx_128_fma);
 extern const solvtab X(solvtab_rdft_avx2);
 extern const solvtab X(solvtab_rdft_avx2_128);
 extern const solvtab X(solvtab_rdft_avx512);
+extern const solvtab X(solvtab_rdft_avx512split);
 extern const solvtab X(solvtab_rdft_kcvi);
 extern const solvtab X(solvtab_rdft_altivec);
 extern const solvtab X(solvtab_rdft_vsx);
