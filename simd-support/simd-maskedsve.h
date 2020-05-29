@@ -85,53 +85,53 @@ typedef DS(svfloat64_t, svfloat32_t) V;
 #define VDUPH(x) TYPE(svtrn2)(x,x)
 
 #ifdef FFTW_SINGLE
-//#define FLIP_RI(x) svreinterpret_f32_u64(svrevw_u64_z(MASKA,svreinterpret_u64_f32(x)))
+//#define FLIP_RI(x) svreinterpret_f32_u64(svrevw_u64_x(MASKA,svreinterpret_u64_f32(x)))
 #define FLIP_RI(x) TYPE(svtrn1)(VDUPH(x),x)
 #else
 #define FLIP_RI(x) TYPE(svtrn1)(VDUPH(x),x)
 #endif
 
 /* FXIME: there is a better way, surely */
-/* #define VCONJ(x)  TYPESUF(svcmla,_z)(MASKA,TYPESUF(svcmla,_z)(MASKA,VZERO,x,VRONE,0),x,VRONE,270) */
-#define VCONJ(x) TYPESUF(svmul,_z)(MASKA,x,VCONEMI)
-#define VBYI(x)  TYPESUF(svcmla,_z)(MASKA,TYPESUF(svcmla,_z)(MASKA,VZERO,x,VCI,0),x,VCI,90)
+/* #define VCONJ(x)  TYPESUF(svcmla,_x)(MASKA,TYPESUF(svcmla,_x)(MASKA,VZERO,x,VRONE,0),x,VRONE,270) */
+#define VCONJ(x) TYPESUF(svmul,_x)(MASKA,x,VCONEMI)
+#define VBYI(x)  TYPESUF(svcmla,_x)(MASKA,TYPESUF(svcmla,_x)(MASKA,VZERO,x,VCI,0),x,VCI,90)
 
-#define VNEG(a)   TYPESUF(svneg,_z)(MASKA,a)
-#define VADD(a,b) TYPESUF(svadd,_z)(MASKA,a,b)
-#define VSUB(a,b) TYPESUF(svsub,_z)(MASKA,a,b)
-#define VMUL(a,b) TYPESUF(svmul,_z)(MASKA,a,b)
-#define VFMA(a, b, c)  TYPESUF(svmad,_z)(MASKA,b,a,c)
-#define VFMS(a, b, c)  TYPESUF(svnmsb,_z)(MASKA,b,a,c)
-#define VFNMS(a, b, c) TYPESUF(svmsb,_z)(MASKA,b,a,c)
-#define VFMAI(b, c)    TYPESUF(svcadd,_z)(MASKA,c,b,90)
-#define VFNMSI(b, c)   TYPESUF(svcadd,_z)(MASKA,c,b,270)
+#define VNEG(a)   TYPESUF(svneg,_x)(MASKA,a)
+#define VADD(a,b) TYPESUF(svadd,_x)(MASKA,a,b)
+#define VSUB(a,b) TYPESUF(svsub,_x)(MASKA,a,b)
+#define VMUL(a,b) TYPESUF(svmul,_x)(MASKA,a,b)
+#define VFMA(a, b, c)  TYPESUF(svmad,_x)(MASKA,b,a,c)
+#define VFMS(a, b, c)  TYPESUF(svnmsb,_x)(MASKA,b,a,c)
+#define VFNMS(a, b, c) TYPESUF(svmsb,_x)(MASKA,b,a,c)
+#define VFMAI(b, c)    TYPESUF(svcadd,_x)(MASKA,c,b,90)
+#define VFNMSI(b, c)   TYPESUF(svcadd,_x)(MASKA,c,b,270)
 /* FIXME: next 3 overkill ? */
 #if 0
-#define VFMACONJ(b,c)  TYPESUF(svcmla,_z)(MASKA,TYPESUF(svcmla,_z)(MASKA,c,b,VRONE,0),b,VRONE,270)
+#define VFMACONJ(b,c)  TYPESUF(svcmla,_x)(MASKA,TYPESUF(svcmla,_x)(MASKA,c,b,VRONE,0),b,VRONE,270)
 #else
 /* Use inline functions instead of macros to avoid replicating inputs */
 static inline V VFMACONJ(V b, V c) {
-	V m = TYPESUF(svcmla,_z)(MASKA,c,b,VRONE,0);
-	return TYPESUF(svcmla,_z)(MASKA,m,b,VRONE,270);
+	V m = TYPESUF(svcmla,_x)(MASKA,c,b,VRONE,0);
+	return TYPESUF(svcmla,_x)(MASKA,m,b,VRONE,270);
 }
 #endif
 #define VFMSCONJ(b,c)  VFMACONJ(b,VNEG(c))
 #define VFNMSCONJ(b,c) VNEG(VFMSCONJ(b,c))
 
 #if 0
-#define VZMUL(a,b)    TYPESUF(svcmla,_z)(MASKA,TYPESUF(svcmla,_z)(MASKA,VZERO,a,b,0),a,b,90)
-#define VZMULJ(a,b)   TYPESUF(svcmla,_z)(MASKA,TYPESUF(svcmla,_z)(MASKA,VZERO,a,b,0),a,b,270)
+#define VZMUL(a,b)    TYPESUF(svcmla,_x)(MASKA,TYPESUF(svcmla,_x)(MASKA,VZERO,a,b,0),a,b,90)
+#define VZMULJ(a,b)   TYPESUF(svcmla,_x)(MASKA,TYPESUF(svcmla,_x)(MASKA,VZERO,a,b,0),a,b,270)
 #define VZMULI(a,b)   VZMUL(VCI,VZMUL(a,b))
 #define VZMULIJ(a,b)   VZMUL(VCI,VZMULJ(a,b))
 #else
 /* Use inline functions instead of macros to avoid replicating inputs */
 static inline V VZMUL(V a, V b) {
-	V m = TYPESUF(svcmla,_z)(MASKA,VZERO,a,b,0);
-	return TYPESUF(svcmla,_z)(MASKA,m,a,b,90);
+	V m = TYPESUF(svcmla,_x)(MASKA,VZERO,a,b,0);
+	return TYPESUF(svcmla,_x)(MASKA,m,a,b,90);
 }
 static inline V VZMULJ(V a, V b) {
-        V m = TYPESUF(svcmla,_z)(MASKA,VZERO,a,b,0);
-        return TYPESUF(svcmla,_z)(MASKA,m,a,b,270);
+        V m = TYPESUF(svcmla,_x)(MASKA,VZERO,a,b,0);
+        return TYPESUF(svcmla,_x)(MASKA,m,a,b,270);
 }
 /* FIXME: there's probably a better way */
 static inline V VZMULI(V a, V b) {
@@ -162,9 +162,9 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   svuint32_t  gvvl = svindex_u32(0, 1);
-  gvvl = svmul_n_u32_z(svptrue_b32(), gvvl, sizeof(R)*ivs);
+  gvvl = svmul_n_u32_x(svptrue_b32(), gvvl, sizeof(R)*ivs);
   gvvl = svzip1_u32(gvvl, gvvl);
-  gvvl = svadd_u32_z(svptrue_b32(), gvvl, svdupq_n_u32(0,sizeof(R),0,sizeof(R)));
+  gvvl = svadd_u32_x(svptrue_b32(), gvvl, svdupq_n_u32(0,sizeof(R),0,sizeof(R)));
   
   return svld1_gather_u32offset_f32(MASKA, x, gvvl);
 }
@@ -176,9 +176,9 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
     v = svreinterpret_f32_f64(svdup_lane_f64(svreinterpret_f64_f32(v),0));
   }
   svuint32_t  gvvl = svindex_u32(0, 1);
-  gvvl = svmul_n_u32_z(svptrue_b32(), gvvl, sizeof(R)*ovs);
+  gvvl = svmul_n_u32_x(svptrue_b32(), gvvl, sizeof(R)*ovs);
   gvvl = svzip1_u32(gvvl, gvvl);
-  gvvl = svadd_u32_z(svptrue_b32(), gvvl, svdupq_n_u32(0,sizeof(R),0,sizeof(R)));
+  gvvl = svadd_u32_x(svptrue_b32(), gvvl, svdupq_n_u32(0,sizeof(R),0,sizeof(R)));
 
   svst1_scatter_u32offset_f32(MASKA, x, gvvl, v);
 }
@@ -190,9 +190,9 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
   svuint64_t  gvvl = svindex_u64(0, 1);
-  gvvl = svmul_n_u64_z(svptrue_b64(), gvvl, sizeof(R)*ivs);
+  gvvl = svmul_n_u64_x(svptrue_b64(), gvvl, sizeof(R)*ivs);
   gvvl = svzip1_u64(gvvl, gvvl);
-  gvvl = svadd_u64_z(svptrue_b64(), gvvl, svdupq_n_u64(0,sizeof(R)));
+  gvvl = svadd_u64_x(svptrue_b64(), gvvl, svdupq_n_u64(0,sizeof(R)));
 
   return svld1_gather_u64offset_f64(MASKA, x, gvvl);
 }
@@ -204,9 +204,9 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
     v = svdupq_lane_f64(v,0);
   }
   svuint64_t  gvvl = svindex_u64(0, 1);
-  gvvl = svmul_n_u64_z(svptrue_b64(), gvvl, sizeof(R)*ovs);
+  gvvl = svmul_n_u64_x(svptrue_b64(), gvvl, sizeof(R)*ovs);
   gvvl = svzip1_u64(gvvl, gvvl);
-  gvvl = svadd_u64_z(svptrue_b64(), gvvl, svdupq_n_u64(0,sizeof(R)));
+  gvvl = svadd_u64_x(svptrue_b64(), gvvl, svdupq_n_u64(0,sizeof(R)));
 
   svst1_scatter_u64offset_f64(MASKA, x, gvvl, v);
 }
@@ -225,7 +225,7 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
   svuint32_t  gvvl = svindex_u32(0, 1);
-  gvvl = svmul_n_u32_z(svptrue_b32(), gvvl, sizeof(R)*ovs);
+  gvvl = svmul_n_u32_x(svptrue_b32(), gvvl, sizeof(R)*ovs);
 
   svst1_scatter_u32offset_f32(MASKA, x, gvvl, v);
 }
@@ -239,7 +239,7 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
   svuint64_t  gvvl = svindex_u64(0, 1);
-  gvvl = svmul_n_u64_z(svptrue_b64(), gvvl, sizeof(R)*ovs);
+  gvvl = svmul_n_u64_x(svptrue_b64(), gvvl, sizeof(R)*ovs);
 
   svst1_scatter_u64offset_f64(MASKA, x, gvvl, v);
 }
