@@ -40,7 +40,6 @@
 #  define TYPEMASK(name) __builtin_epi_ ## name ## _1xf64_mask
 #endif /* FFTW_SINGLE */
 
-/* FIXME: this hardwire to 512 bits */
 #if R5V_SIZE == 16384
 #define VL DS(128, 256)        /* SIMD complex vector length */
 #elif R5V_SIZE == 8192
@@ -307,27 +306,6 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 #define TWVL1 (VL)
 #undef VTW_SIZE
 #undef REQ_VTW1
-#if 0
-#if R5V_SIZE == 512
-#ifdef FFTW_SINGLE
-# define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}, \
-                   {TW_CEXP, v+4, x}, {TW_CEXP, v+5, x}, {TW_CEXP, v+6, x}, {TW_CEXP, v+7, x}
-#else /* !FFTW_SINGLE */
-# define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}
-#endif /* FFTW_SINGLE */
-#define TWVL1 (VL)
-#elif R5V_SIZE == 256
-#ifdef FFTW_SINGLE
-# define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}, {TW_CEXP, v+2, x}, {TW_CEXP, v+3, x}
-#else /* !FFTW_SINGLE */
-# define VTW1(v,x) {TW_CEXP, v, x}, {TW_CEXP, v+1, x}
-#endif /* FFTW_SINGLE */
-#define TWVL1 (VL)
-#else /* R5V_SIZE */
-#error "R5V_SIZE must be 256 or 512 bits"
-#endif /* R5V_SIZE */
-#endif
-
 
 static inline V BYTW1(const R *t, V sr)
 {
@@ -346,43 +324,6 @@ static inline V BYTWJ1(const R *t, V sr)
 #define TWVL2 (2*VL)
 #undef VTW_SIZE
 #undef REQ_VTW2
-#if 0
-#if R5V_SIZE == 512
-#ifdef FFTW_SINGLE
-# define VTW2(v,x)							     \
-   {TW_COS, v  ,  x}, {TW_COS, v  , x}, {TW_COS, v+1,  x}, {TW_COS, v+1, x}, \
-   {TW_COS, v+2,  x}, {TW_COS, v+2, x}, {TW_COS, v+3,  x}, {TW_COS, v+3, x}, \
-   {TW_COS, v+4,  x}, {TW_COS, v+4, x}, {TW_COS, v+5,  x}, {TW_COS, v+5, x}, \
-   {TW_COS, v+6,  x}, {TW_COS, v+6, x}, {TW_COS, v+7,  x}, {TW_COS, v+7, x}, \
-   {TW_SIN, v  , -x}, {TW_SIN, v  , x}, {TW_SIN, v+1, -x}, {TW_SIN, v+1, x}, \
-   {TW_SIN, v+2, -x}, {TW_SIN, v+2, x}, {TW_SIN, v+3, -x}, {TW_SIN, v+3, x}, \
-   {TW_SIN, v+4, -x}, {TW_SIN, v+4, x}, {TW_SIN, v+5, -x}, {TW_SIN, v+5, x}, \
-   {TW_SIN, v+6, -x}, {TW_SIN, v+6, x}, {TW_SIN, v+7, -x}, {TW_SIN, v+7, x}
-#else /* !FFTW_SINGLE */
-# define VTW2(v,x)							     \
-   {TW_COS, v  ,  x}, {TW_COS, v  , x}, {TW_COS, v+1,  x}, {TW_COS, v+1, x}, \
-   {TW_COS, v+2,  x}, {TW_COS, v+2, x}, {TW_COS, v+3,  x}, {TW_COS, v+3, x}, \
-   {TW_SIN, v  , -x}, {TW_SIN, v  , x}, {TW_SIN, v+1, -x}, {TW_SIN, v+1, x}, \
-   {TW_SIN, v+2, -x}, {TW_SIN, v+2, x}, {TW_SIN, v+3, -x}, {TW_SIN, v+3, x}
-#endif /* FFTW_SINGLE */
-#define TWVL2 (2 * VL)
-#elif R5V_SIZE == 256
-#ifdef FFTW_SINGLE
-# define VTW2(v,x)                                                           \
-   {TW_COS, v  ,  x}, {TW_COS, v  , x}, {TW_COS, v+1,  x}, {TW_COS, v+1, x}, \
-   {TW_COS, v+2,  x}, {TW_COS, v+2, x}, {TW_COS, v+3,  x}, {TW_COS, v+3, x}, \
-   {TW_SIN, v  , -x}, {TW_SIN, v  , x}, {TW_SIN, v+1, -x}, {TW_SIN, v+1, x}, \
-   {TW_SIN, v+2, -x}, {TW_SIN, v+2, x}, {TW_SIN, v+3, -x}, {TW_SIN, v+3, x}
-#else /* !FFTW_SINGLE */
-# define VTW2(v,x)                                                           \
-   {TW_COS, v  ,  x}, {TW_COS, v  , x}, {TW_COS, v+1,  x}, {TW_COS, v+1, x}, \
-   {TW_SIN, v  , -x}, {TW_SIN, v  , x}, {TW_SIN, v+1, -x}, {TW_SIN, v+1, x}
-#endif /* FFTW_SINGLE */
-#define TWVL2 (2 * VL)
-#else /* R5V_SIZE */
-#error "R5V_SIZE must be 256 or 512 bits"
-#endif /* R5V_SIZE */
-#endif
 
 static inline V BYTW2(const R *t, V sr)
 {
@@ -411,44 +352,6 @@ static inline V BYTWJ2(const R *t, V sr)
 #define TWVLS (2*VL)
 #undef VTW_SIZE
 #undef REQ_VTWS
-#if 0
-#if R5V_SIZE == 512
-#ifdef FFTW_SINGLE
-# define VTWS(v,x)                                                            \
-  {TW_COS, v   , x}, {TW_COS, v+1 , x}, {TW_COS, v+2 , x}, {TW_COS, v+3 , x}, \
-  {TW_COS, v+4 , x}, {TW_COS, v+5 , x}, {TW_COS, v+6 , x}, {TW_COS, v+7 , x}, \
-  {TW_COS, v+8 , x}, {TW_COS, v+9 , x}, {TW_COS, v+10, x}, {TW_COS, v+11, x}, \
-  {TW_COS, v+12, x}, {TW_COS, v+13, x}, {TW_COS, v+14, x}, {TW_COS, v+15, x}, \
-  {TW_SIN, v   , x}, {TW_SIN, v+1 , x}, {TW_SIN, v+2 , x}, {TW_SIN, v+3 , x}, \
-  {TW_SIN, v+4 , x}, {TW_SIN, v+5 , x}, {TW_SIN, v+6 , x}, {TW_SIN, v+7 , x}, \
-  {TW_SIN, v+8 , x}, {TW_SIN, v+9 , x}, {TW_SIN, v+10, x}, {TW_SIN, v+11, x}, \
-  {TW_SIN, v+12, x}, {TW_SIN, v+13, x}, {TW_SIN, v+14, x}, {TW_SIN, v+15, x}
-#else /* !FFTW_SINGLE */
-# define VTWS(v,x)							  \
-  {TW_COS, v  , x}, {TW_COS, v+1, x}, {TW_COS, v+2, x}, {TW_COS, v+3, x}, \
-  {TW_COS, v+4, x}, {TW_COS, v+5, x}, {TW_COS, v+6, x}, {TW_COS, v+7, x}, \
-  {TW_SIN, v  , x}, {TW_SIN, v+1, x}, {TW_SIN, v+2, x}, {TW_SIN, v+3, x}, \
-  {TW_SIN, v+4, x}, {TW_SIN, v+5, x}, {TW_SIN, v+6, x}, {TW_SIN, v+7, x}
-#endif /* FFTW_SINGLE */
-#define TWVLS (2 * VL)
-#elif R5V_SIZE == 256
-#ifdef FFTW_SINGLE
-# define VTWS(v,x)                                                            \
-  {TW_COS, v   , x}, {TW_COS, v+1 , x}, {TW_COS, v+2 , x}, {TW_COS, v+3 , x}, \
-  {TW_COS, v+4 , x}, {TW_COS, v+5 , x}, {TW_COS, v+6 , x}, {TW_COS, v+7 , x}, \
-  {TW_SIN, v   , x}, {TW_SIN, v+1 , x}, {TW_SIN, v+2 , x}, {TW_SIN, v+3 , x}, \
-  {TW_SIN, v+4 , x}, {TW_SIN, v+5 , x}, {TW_SIN, v+6 , x}, {TW_SIN, v+7 , x}
-#else /* !FFTW_SINGLE */
-# define VTWS(v,x)                                                        \
-  {TW_COS, v  , x}, {TW_COS, v+1, x}, {TW_COS, v+2, x}, {TW_COS, v+3, x}, \
-  {TW_SIN, v  , x}, {TW_SIN, v+1, x}, {TW_SIN, v+2, x}, {TW_SIN, v+3, x}
-#endif /* FFTW_SINGLE */
-#define TWVLS (2 * VL)
-#else /* R5V_SIZE */
-#error "R5V_SIZE must be 256 or 512 bits"
-#endif
-#endif
-
 
 #define VLEAVE() /* nothing */
 
