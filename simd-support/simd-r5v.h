@@ -33,11 +33,19 @@
 #  define TYPE(name) __builtin_epi_ ## name ## _2xf32
 #  define TYPEINT(name) __builtin_epi_ ## name ## _2xi32
 #  define TYPEMASK(name) __builtin_epi_ ## name ## _2xf32_mask
+#ifdef USE_EPI_CUSTOM
+#  define TYPE2(name) __builtin_epi_ ## name ## _2xf32x2
+#  define TYPE2INT(name) __builtin_epi_ ## name ## _2xi32x2
+#endif
 #else /* !FFTW_SINGLE */
 #  define DS(d,s) d /* double-precision option */
 #  define TYPE(name) __builtin_epi_ ## name ## _1xf64
 #  define TYPEINT(name) __builtin_epi_ ## name ## _1xi64
 #  define TYPEMASK(name) __builtin_epi_ ## name ## _1xf64_mask
+#ifdef USE_EPI_CUSTOM
+#  define TYPE2(name) __builtin_epi_ ## name ## _1xf64x2
+#  define TYPE2INT(name) __builtin_epi_ ## name ## _1xi64x2
+#endif
 #endif /* FFTW_SINGLE */
 
 #if R5V_SIZE == 16384
@@ -70,6 +78,10 @@
 typedef DS(__epi_1xf64, __epi_2xf32) V;
 typedef DS(__epi_1xi64, __epi_2xi32) Vint;
 typedef DS(__epi_1xi1, __epi_2xi1) Vmask;
+#ifdef USE_EPI_CUSTOM
+typedef DS(__epi_1xf64x2, __epi_2xf32x2) V2;
+typedef DS(__epi_1xi64x2, __epi_2xi32x2) V2int;
+#endif
 #define INT2MASK(mask) DS(TYPEINT(cast_1xi1),TYPEINT(cast_2xi1))(mask)
 
 //##define VLIT(re, im) DS(svdupq_n_f64(re,im),svdupq_n_f32(re,im,re,im))
@@ -95,6 +107,7 @@ static inline V VLIT(const R re, const R im) {
 #define VONE  VLIT1(DS(1.,1.f))
 #define VMINUSONE VLIT1(DS(-1.,-1.f))
 
+#ifndef USE_EPI_CUSTOM
 static inline V VDUPL(const V x) {
 	Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
 	Vint vnotone = TYPEINT(vmv_v_x)(DS(~1ull,~1), 2*VL);
@@ -114,6 +127,22 @@ static inline V FLIP_RI(const V x) {
 	Vint hidx = TYPEINT(vxor)(idx, vone, 2*VL); // (1, 0, 3, 2, ...)
 	return TYPE(vrgather)(x, hidx, 2*VL);
 }
+#else
+static inline V VDUPL(const V x) {
+	V2 temp = TYPE2(vtrn)(x, x, 2*VL);
+	return temp.v0;
+}
+static inline V VDUPH(const V x) {
+	V2 temp = TYPE2(vtrn)(x, x, 2*VL);
+	return temp.v1;
+}
+
+static inline V FLIP_RI(const V x) {
+	V2 xx = TYPE2(vtrn)(x, x, 2*VL);
+	V2 temp = TYPE2(vtrn)(xx.v1, x, 2*VL);
+	return temp.v0;
+}
+#endif
 
 static inline V VCONJ(const V x) {
 	Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
@@ -144,6 +173,7 @@ static inline V VBYI(V x)
 #define VFMSCONJ(b,c)  VFMACONJ(b,VNEG(c)) // fixme: improve
 #define VFNMSCONJ(b,c) VNEG(VFMSCONJ(b,c)) // fixme: improve
 
+#ifndef USE_EPI_CUSTOM
 static inline V VZMUL(V tx, V sr) // fixme: improve
 {
   V tr;
@@ -164,6 +194,16 @@ static inline V VZMUL(V tx, V sr) // fixme: improve
   sr = TYPE(vrgather)(sr, hidx, 2*VL); // Imag, Real of (conjugate of) sr
   return TYPE(vfmacc)(tr,ti,sr,2*VL); // (-Imag, Real)[sr] * (Imag, Imag)[tx] + (Real, Real)[tx] * (Real,Imag)[sr]
 }
+#else
+static inline V VZMUL(V tx, V sr)
+{
+  V tr = VDUPL(tx);
+  V ti = VDUPH(tx);
+  tr = VMUL(sr, tr);
+  sr = VBYI(sr);
+  return VFMA(ti, sr, tr);
+}
+#endif
 
 static inline V VZMULJ(V tx, V sr) // fixme: improve
 {
@@ -241,12 +281,19 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+#ifndef USE_EPI_CUSTOM
   Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
   Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
   hidx = TYPEINT(vmul)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ivs, 2*VL), 2*VL);
   Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
   Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
   hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
+#else
+  Vint hidx = TYPEINT(vmul)(idx, TYPEINT(vmv_v_x)(sizeof(R)*ivs, 2*VL), 2*VL);
+  Vint hidxp1 = TYPEINT(vadd)(hidx, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
+  V2int hidx2 = TYPE2INT(vzip2)(hidx, hidxp1, 2*VL);
+  hidx = hidx2.v0;
+#endif
   return TYPE(vload_indexed)(x, hidx, 2*VL);
 }
 
@@ -259,10 +306,17 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
   if (ovs==0) { // FIXME: hack for extra_iter hack support
     v = TYPE(vrgather)(v, idx2, 2*VL);
   }
+#ifndef USE_EPI_CUSTOM
   Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
   hidx = TYPEINT(vmul)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
   Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
   hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
+#else
+  Vint hidx = TYPEINT(vmul)(idx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
+  Vint hidxp1 = TYPEINT(vadd)(hidx, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
+  V2int hidx2 = TYPE2INT(vzip2)(hidx, hidxp1, 2*VL);
+  hidx = hidx2.v0;
+#endif
   TYPE(vstore_indexed)(x, v, hidx, 2*VL);
 }
 
