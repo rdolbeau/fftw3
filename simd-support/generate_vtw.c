@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
 			exit(-4);
 		if (size < 1)
 			exit(-2);
-		if (size > 512)
+		if (size > 1024)
 			exit(-3);
 		printf("#define VTW1(v,x) ");
 		for (unsigned int i = 0 ; i < size ; i++) {
@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
                         exit(-4);
                 if (size < 1)
                         exit(-2);
-                if (size > 512)
+                if (size > 1024)
                         exit(-3);
                 printf("#define VTW2(v,x) ");
                 for (unsigned int i = 0 ; i < size ; i++) {
@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
                         exit(-4);
                 if (size < 1)
                         exit(-2);
-                if (size > 512)
+                if (size > 1024)
                         exit(-3);
                 printf("#define VTWS(v,x) ");
                 for (unsigned int i = 0 ; i < size ; i++) {
