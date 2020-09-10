@@ -33,6 +33,10 @@
 #  define TYPE(name) __builtin_epi_ ## name ## _2xf32
 #  define TYPEINT(name) __builtin_epi_ ## name ## _2xi32
 #  define TYPEMASK(name) __builtin_epi_ ## name ## _2xf32_mask
+#if __riscv_vector_version == 700
+#define __builtin_epi_vmv_v_x_2xi32(a,b) __builtin_epi_vbroadcast_2xi32(a,b)
+#define __builtin_epi_vfmv_v_f_2xf32(a,b) __builtin_epi_vbroadcast_2xf32(a,b)
+#endif
 #ifdef USE_EPI_CUSTOM
 #  define TYPE2(name) __builtin_epi_ ## name ## _2xf32x2
 #  define TYPE2INT(name) __builtin_epi_ ## name ## _2xi32x2
@@ -42,6 +46,10 @@
 #  define TYPE(name) __builtin_epi_ ## name ## _1xf64
 #  define TYPEINT(name) __builtin_epi_ ## name ## _1xi64
 #  define TYPEMASK(name) __builtin_epi_ ## name ## _1xf64_mask
+#if __riscv_vector_version == 700
+#define __builtin_epi_vmv_v_x_1xi64(a,b) __builtin_epi_vbroadcast_1xi64(a,b)
+#define __builtin_epi_vfmv_v_f_1xf64(a,b) __builtin_epi_vbroadcast_1xf64(a,b)
+#endif
 #ifdef USE_EPI_CUSTOM
 #  define TYPE2(name) __builtin_epi_ ## name ## _1xf64x2
 #  define TYPE2INT(name) __builtin_epi_ ## name ## _1xi64x2
