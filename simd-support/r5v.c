@@ -22,9 +22,11 @@
 #include "kernel/ifftw.h"
 
 #if HAVE_R5V
+#include <riscv_vector.h>
+
 /* don't know how to autodetect R5V; assume it is present */
   int X(have_simd_r5v)(int rs)
   {
-    return __builtin_epi_vsetvl(rs/64, __epi_e64, __epi_m1) >= (rs/64);
+    return __riscv_vsetvl_e64m1(rs/64) >= (rs/64);
   }
 #endif
