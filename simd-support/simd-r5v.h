@@ -298,7 +298,7 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
   hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ovs, 2*VL);
   Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
   hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
-  __riscv_vsoxei8_v_f32m1(x, hidx, v, 2*VL);
+  __riscv_vsoxei32_v_f32m1(x, hidx, v, 2*VL);
 }
 
 #else /* !FFTW_SINGLE */
