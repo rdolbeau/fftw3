@@ -111,21 +111,21 @@ static inline V VLIT(const R re, const R im) {
 
 static inline V VDUPL(const V x) {
 	Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-	Vint vnotone = TYPEINT(vmv_v_x)(DS(~1ull,~1), 2*VL);
-	Vint hidx = TYPEINT(vand_vv)(idx, vnotone, 2*VL); // (0, 0, 2, 2, ...)
+	//Vint vnotone = TYPEINT(vmv_v_x)(DS(~1ull,~1), 2*VL);
+	Vint hidx = TYPEINT(vand_vx)(idx, DS(~1ull,~1), 2*VL); // (0, 0, 2, 2, ...)
 	return TYPE(vrgather_vv)(x, hidx, 2*VL);
 }
 static inline V VDUPH(const V x) {
 	Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-	Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-	Vint hidx = TYPEINT(vor_vv)(idx, vone, 2*VL); // (1, 1, 3, 3, ...)
+	//Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
+	Vint hidx = TYPEINT(vor_vx)(idx, 1, 2*VL); // (1, 1, 3, 3, ...)
 	return TYPE(vrgather_vv)(x, hidx, 2*VL);
 }
 
 static inline V FLIP_RI(const V x) {
 	Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-	Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-	Vint hidx = TYPEINT(vxor_vv)(idx, vone, 2*VL); // (1, 0, 3, 2, ...)
+	//Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
+	Vint hidx = TYPEINT(vxor_vx)(idx, 1, 2*VL); // (1, 0, 3, 2, ...)
 	return TYPE(vrgather_vv)(x, hidx, 2*VL);
 }
 
@@ -146,8 +146,8 @@ static inline V FLIP_RI(const V x) {
 /* broken by INT2MASK ?*/
 static inline V VCONJ(const V x) {
 	Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-	Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-	Vint hidx = TYPEINT(vand_vv)(idx, vone, 2*VL); // (0, 1, 0, 1, 0, 1)
+	//Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
+	Vint hidx = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, 0, 1)
 	//return TYPEMASK(vfsgnjn_vv)(x, x, x, INT2MASK(hidx), 2*VL);
 	return TYPEMASK(vfsgnjn_vv)(INT2MASK(hidx), x, x, 2*VL);
 }
@@ -213,19 +213,19 @@ static inline V VZMUL(V tx, V sr) // fixme: improve
   V tr;
   V ti;
   Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vnotone = TYPEINT(vmv_v_x)(DS(~1ull,~1), 2*VL);
-  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
+  //Vint vnotone = TYPEINT(vmv_v_x)(DS(~1ull,~1), 2*VL);
+  //Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
   Vint hidx;
 	
-  hidx = TYPEINT(vand_vv)(idx, vnotone, 2*VL); // (0, 0, 2, 2, ...)
+  hidx = TYPEINT(vand_vv)(idx, DS(-1ull,-1), 2*VL); // (0, 0, 2, 2, ...)
   tr = TYPE(vrgather_vv)(tx, hidx, 2*VL); // Real, Real of tx
-  hidx = TYPEINT(vor_vv)(idx, vone, 2*VL); // (1, 1, 3, 3, ...)  // could be hidx + vone, ...
+  hidx = TYPEINT(vor_vx)(idx, 1, 2*VL); // (1, 1, 3, 3, ...)  // could be hidx + vone, ...
   ti = TYPE(vrgather_vv)(tx, hidx, 2*VL); // Imag, Imag of tx
   tr = TYPE(vfmul_vv)(sr,tr,2*VL); // (Real, Real)[tx] * (Real,Imag)[sr]
-  hidx = TYPEINT(vand_vv)(idx, vone, 2*VL); // (0, 1, 0, 1, 0, 1)
+  hidx = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, 0, 1)
   //sr = TYPEMASK(vfsgnjn)(sr, sr, sr, INT2MASK(hidx), 2*VL); // conjugate of sr
   sr = TYPEMASK(vfsgnjn_vv)(INT2MASK(hidx), sr, sr, 2*VL); // conjugate of sr
-  hidx = TYPEINT(vxor_vv)(idx, vone, 2*VL); // (1, 0, 3, 2, ...)
+  hidx = TYPEINT(vxor_vx)(idx, 1, 2*VL); // (1, 0, 3, 2, ...)
   sr = TYPE(vrgather_vv)(sr, hidx, 2*VL); // Imag, Real of (conjugate of) sr
   return TYPE(vfmacc_vv)(tr,ti,sr,2*VL); // (-Imag, Real)[sr] * (Imag, Imag)[tx] + (Real, Real)[tx] * (Real,Imag)[sr]
 }
@@ -276,11 +276,11 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint hidx = TYPEINT(vsrl_vv)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul_vv)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ivs, 2*VL), 2*VL);
-  Vint idx2 = TYPEINT(vand_vv)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
-  Vint hidx2 = TYPEINT(vmul_vv)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
+  //Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
+  Vint hidx = TYPEINT(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ivs, 2*VL);
+  Vint idx2 = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
+  Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
   hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
   return __riscv_vloxei32_v_f32m1(x, hidx, 2*VL);
 }
@@ -289,14 +289,14 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint idx2 = TYPEINT(vand_vv)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
+  //Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
+  Vint idx2 = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
   if (ovs==0) { // FIXME: hack for extra_iter hack support
     v = TYPE(vrgather_vv)(v, idx2, 2*VL);
   }
-  Vint hidx = TYPEINT(vsrl_vv)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul_vv)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
-  Vint hidx2 = TYPEINT(vmul_vv)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
+  Vint hidx = TYPEINT(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ovs, 2*VL);
+  Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
   hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
   __riscv_vsoxei8_v_f32m1(x, hidx, v, 2*VL);
 }
@@ -307,11 +307,11 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint hidx = TYPEINT(vsrl_vv)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul_vv)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ivs, 2*VL), 2*VL);
-  Vint idx2 = TYPEINT(vand_vv)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
-  Vint hidx2 = TYPEINT(vmul_vv)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
+  //Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
+  Vint hidx = TYPEINT(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ivs, 2*VL);
+  Vint idx2 = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
+  Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
   hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
   return __riscv_vloxei64_v_f64m1(x, hidx, 2*VL);
 }
@@ -320,14 +320,14 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint idx2 = TYPEINT(vand_vv)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
+  //Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
+  Vint idx2 = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
   if (ovs==0) { // FIXME: hack for extra_iter hack support
     v = TYPE(vrgather_vv)(v, idx2, 2*VL);
   }
-  Vint hidx = TYPEINT(vsrl_vv)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul_vv)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
-  Vint hidx2 = TYPEINT(vmul_vv)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
+  Vint hidx = TYPEINT(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ovs, 2*VL);
+  Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
   hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
   __riscv_vsoxei64_v_f64m1(x, hidx, v, 2*VL);
 }
@@ -346,7 +346,7 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  Vint hidx = TYPEINT(vmul_vv)(idx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
+  Vint hidx = TYPEINT(vmul_vx)(idx, sizeof(R)*ovs, 2*VL);
   __riscv_vsoxei32_v_f32m1(x, hidx, v, 2*VL);
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
@@ -359,7 +359,7 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  Vint hidx = TYPEINT(vmul_vv)(idx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
+  Vint hidx = TYPEINT(vmul_vx)(idx, sizeof(R)*ovs, 2*VL);
   __riscv_vsoxei64_v_f64m1(x, hidx, v, 2*VL);
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
