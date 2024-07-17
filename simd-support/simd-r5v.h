@@ -34,6 +34,7 @@
 #  define DS(d,s) s /* single-precision option */
 #  define TYPE(name) __riscv_ ## name ## _f32m1
 #  define TYPEINT(name) __riscv_ ## name ## _u32m1
+#  define TYPEINT64(name) __riscv_ ## name ## _u64m2
 #  define TYPEMASK(name) __riscv_ ## name ## _f32m1_m
 #  define TYPEMERGEDMASK(name) __riscv_ ## name ## _f32m1_mu
 #  define TYPEINTERPRETF2U(name) __riscv_ ## name ## _f32m1_u32m1
@@ -42,6 +43,7 @@
 #  define DS(d,s) d /* double-precision option */
 #  define TYPE(name) __riscv_ ## name ## _f64m1
 #  define TYPEINT(name) __riscv_ ## name ## _u64m1
+#  define TYPEINT64(name) __riscv_ ## name ## _u64m1
 #  define TYPEMASK(name) __riscv_ ## name ## _f64m1_m
 #  define TYPEMERGEDMASK(name) __riscv_ ## name ## _f64m1_tum
 #  define TYPEINTERPRETF2U(name) __riscv_ ## name ## _f64m1_u64m1
@@ -79,6 +81,7 @@
 
 typedef DS(vfloat64m1_t, vfloat32m1_t) V;
 typedef DS(vuint64m1_t, vuint32m1_t) Vint;
+typedef DS(vuint64m1_t, vuint64m2_t) Vint64;
 typedef DS(vbool64_t, vbool32_t) Vmask;
 #define INT2MASK(imask) DS(__riscv_vmsne_vx_u64m1_b64, __riscv_vmsne_vx_u32m1_b32)(imask, 0, 2*VL)
 
@@ -170,7 +173,7 @@ static inline V VBYI(V x)
   return x;
 }
 
-#if 0
+#if 1
 static inline V VZMUL(V tx, V sr)
 {
     V tr = VDUPL(tx);
@@ -270,34 +273,59 @@ static inline void STA(R *x, V v, INT ovs, const R *aligned_like) {
 
 #if FFTW_SINGLE
 #warning "Should be optimized with strided 64 bits access"
-
 static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  //Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint hidx = TYPEINT(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ivs, 2*VL);
-  Vint idx2 = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
-  Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
-  hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
-  return __riscv_vluxei32_v_f32m1(x, hidx, 2*VL);
+#if 0
+/* "If the vector offset elements are narrower than XLEN, they are zero-extended to XLEN "
+   => so negative ivs don't work in F32, as the negative i32 indices are zero-extended, not sign-extended...
+   in this case, we need 64-bits indices (in LMUL=2)
+ */
+  Vint64 idx = TYPEINT64(vid_v)(2*VL); // (0, 1, 2, 3, ...)
+  //Vint vone = TYPEINT64(vmv_v_x)(1, 2*VL);
+  Vint64 hidx = TYPEINT64(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT64(vmul_vx)(hidx, sizeof(R)*ivs, 2*VL);
+  Vint64 idx2 = TYPEINT64(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
+  Vint64 hidx2 = TYPEINT64(vmul_vx)(idx2, sizeof(R), 2*VL);
+  hidx = TYPEINT64(vadd_vv)(hidx, hidx2, 2*VL);
+  return TYPE(vluxei64_v)(x, hidx, 2*VL);
+#else
+  /* no intrinsics to convert directly between float vector of different SEW...
+     so we get this not-very-nice sequence of reinterpret
+                                 IN    OUT */
+  return(__riscv_vreinterpret_v_u32m1_f32m1(
+         __riscv_vreinterpret_v_u64m1_u32m1(
+         __riscv_vreinterpret_v_f64m1_u64m1(__riscv_vlse64_v_f64m1((const double*)x, sizeof(R)*ivs, VL)))));
+#endif
 }
 
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  //Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint idx2 = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
+#if 0
+/* "If the vector offset elements are narrower than XLEN, they are zero-extended to XLEN "
+   => so negative ovs don't work in F32, as the negative i32 indices are zero-extended, not sign-extended...
+   in this case, we need 64-bits indices (in LMUL=2)
+ */
+  Vint64 idx = TYPEINT64(vid_v)(2*VL); // (0, 1, 2, 3, ...)
+  //Vint vone = TYPEINT64(64vmv_v_x)(1, 2*VL);
+  Vint64 idx2 = TYPEINT64(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
   if (ovs==0) { // FIXME: hack for extra_iter hack support
-    v = TYPE(vrgather_vv)(v, idx2, 2*VL);
+    v = TYPE(vrgather_vv)(v, idx2, 2*VL);// FIXME: f32 gather takes i32 indices
   }
-  Vint hidx = TYPEINT(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ovs, 2*VL);
-  Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
-  hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
-  __riscv_vsuxei32_v_f32m1(x, hidx, v, 2*VL);
+  Vint64 hidx = TYPEINT64(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT64(vmul_vx)(hidx, sizeof(R)*ovs, 2*VL);
+  Vint64 hidx2 = TYPEINT64(vmul_vx)(idx2, sizeof(R), 2*VL);
+  hidx = TYPEINT64(vadd_vv)(hidx, hidx2, 2*VL);
+  TYPE(vsuxei64_v)x, hidx, v, 2*VL);
+#else
+  /* no intrinsics to convert directly between float vector of different SEW...
+     so we get this not-very-nice sequence of reinterpret
+                                                                           IN    OUT */
+  __riscv_vsse64_v_f64m1((double*)x, sizeof(R)*ovs, __riscv_vreinterpret_v_u64m1_f64m1(
+                                                    __riscv_vreinterpret_v_u32m1_u64m1(
+                                                    __riscv_vreinterpret_v_f32m1_u32m1(v))), VL);
+#endif
 }
 
 #else /* !FFTW_SINGLE */
@@ -305,30 +333,30 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  //Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint hidx = TYPEINT(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ivs, 2*VL);
-  Vint idx2 = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
-  Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
-  hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
-  return __riscv_vluxei64_v_f64m1(x, hidx, 2*VL);
+  Vint64 idx = TYPEINT64(vid_v)(2*VL); // (0, 1, 2, 3, ...)
+  //Vint64 vone = TYPEINT64(vmv_v_x)(1, 2*VL);
+  Vint64 hidx = TYPEINT64(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT64(vmul_vx)(hidx, sizeof(R)*ivs, 2*VL);
+  Vint64 idx2 = TYPEINT64(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
+  Vint64 hidx2 = TYPEINT64(vmul_vx)(idx2, sizeof(R), 2*VL);
+  hidx = TYPEINT64(vadd_vv)(hidx, hidx2, 2*VL);
+  return TYPE(vluxei64_v)(x, hidx, 2*VL);
 }
 
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  //Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint idx2 = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
+  Vint64 idx = TYPEINT64(vid_v)(2*VL); // (0, 1, 2, 3, ...)
+  //Vint vone = TYPEINT64(vmv_v_x)(1, 2*VL);
+  Vint64 idx2 = TYPEINT64(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
   if (ovs==0) { // FIXME: hack for extra_iter hack support
     v = TYPE(vrgather_vv)(v, idx2, 2*VL);
   }
-  Vint hidx = TYPEINT(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ovs, 2*VL);
-  Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
-  hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
-  __riscv_vsuxei64_v_f64m1(x, hidx, v, 2*VL);
+  Vint64 hidx = TYPEINT64(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT64(vmul_vx)(hidx, sizeof(R)*ovs, 2*VL);
+  Vint64 hidx2 = TYPEINT64(vmul_vx)(idx2, sizeof(R), 2*VL);
+  hidx = TYPEINT64(vadd_vv)(hidx, hidx2, 2*VL);
+  TYPE(vsuxei64_v)(x, hidx, v, 2*VL);
 }
 
 #endif /* FFTW_SINGLE */
@@ -345,11 +373,11 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
 #if 0
-  Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  Vint hidx = TYPEINT(vmul_vx)(idx, sizeof(R)*ovs, 2*VL);
-  __riscv_vsuxei32_v_f32m1(x, hidx, v, 2*VL);
+  Vint64 idx = TYPEINT64(vid_v)(2*VL); // (0, 1, 2, 3, ...)
+  Vint64 hidx = TYPEINT64(vmul_vx)(idx, sizeof(R)*ovs, 2*VL);
+  TYPE(vsuxei64_v)(x, hidx, v, 2*VL);
 #else
-  __riscv_vsse32_v_f32m1(x, sizeof(R)*ovs, v, 2*VL);
+  TYPE(vsse32_v)(x, sizeof(R)*ovs, v, 2*VL);
 #endif
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
@@ -363,11 +391,11 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
 #if 0
-  Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  Vint hidx = TYPEINT(vmul_vx)(idx, sizeof(R)*ovs, 2*VL);
-  __riscv_vsuxei64_v_f64m1(x, hidx, v, 2*VL);
+  Vint64 idx = TYPEINT64(vid_v)(2*VL); // (0, 1, 2, 3, ...)
+  Vint64 hidx = TYPEINT64(vmul_vx)(idx, sizeof(R)*ovs, 2*VL);
+  TYPE(vsuxei64_v)(x, hidx, v, 2*VL);
 #else
-  __riscv_vsse64_v_f64m1(x, sizeof(R)*ovs, v, 2*VL);
+  TYPE(vsse64_v)(x, sizeof(R)*ovs, v, 2*VL);
 #endif
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
@@ -375,7 +403,7 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 #define STM4(x,v,ovs,aligned_like) /* no-op */
 static inline void STN4(R *x, V v0, V v1, V v2, V v3, INT ovs) {
   vfloat64m1x4_t v = __riscv_vcreate_v_f64m1x4(v0, v1, v2, v3);
-  __riscv_vssseg4e64_v_f64m1x4(x, ovs*sizeof(R), v, VL*2);
+  __riscv_vssseg4e64_v_f64m1x4(x, ovs*sizeof(R), v, 2*VL);
 }
 #endif
 #endif /* FFTW_SINGLE */
