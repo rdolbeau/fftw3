@@ -35,6 +35,7 @@
 #  define TYPE(name) __riscv_ ## name ## _f32m1
 #  define TYPEINT(name) __riscv_ ## name ## _u32m1
 #  define TYPEMASK(name) __riscv_ ## name ## _f32m1_m
+#  define TYPEMERGEDMASK(name) __riscv_ ## name ## _f32m1_mu
 #  define TYPEINTERPRETF2U(name) __riscv_ ## name ## _f32m1_u32m1
 #  define TYPEINTERPRETU2F(name) __riscv_ ## name ## _u32m1_f32m1
 #else /* !FFTW_SINGLE */
@@ -42,6 +43,7 @@
 #  define TYPE(name) __riscv_ ## name ## _f64m1
 #  define TYPEINT(name) __riscv_ ## name ## _u64m1
 #  define TYPEMASK(name) __riscv_ ## name ## _f64m1_m
+#  define TYPEMERGEDMASK(name) __riscv_ ## name ## _f64m1_tum
 #  define TYPEINTERPRETF2U(name) __riscv_ ## name ## _f64m1_u64m1
 #  define TYPEINTERPRETU2F(name) __riscv_ ## name ## _u64m1_f64m1
 #endif /* FFTW_SINGLE */
@@ -78,8 +80,7 @@
 typedef DS(vfloat64m1_t, vfloat32m1_t) V;
 typedef DS(vuint64m1_t, vuint32m1_t) Vint;
 typedef DS(vbool64_t, vbool32_t) Vmask;
-/* that was wrorking nicely in V0.7.1, but the mask organization in V1.0 breaks it */
-// #define INT2MASK(mask) DS(__riscv_vreinterpret_v_u64m1_b64,__riscv_vreinterpret_v_u32m1_b32)(mask)
+#define INT2MASK(imask) DS(__riscv_vmsne_vx_u64m1_b64, __riscv_vmsne_vx_u32m1_b32)(imask, 0, 2*VL)
 
 /* unused */
 /*
@@ -142,14 +143,13 @@ static inline V FLIP_RI(const V x) {
 #define VFMSCONJ(b,c)  VFMACONJ(b,VNEG(c)) // fixme: improve
 #define VFNMSCONJ(b,c) VNEG(VFMSCONJ(b,c)) // fixme: improve
 
-#if 0
-/* broken by INT2MASK ?*/
+#if 1
 static inline V VCONJ(const V x) {
 	Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
 	//Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
 	Vint hidx = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, 0, 1)
 	//return TYPEMASK(vfsgnjn_vv)(x, x, x, INT2MASK(hidx), 2*VL);
-	return TYPEMASK(vfsgnjn_vv)(INT2MASK(hidx), x, x, 2*VL);
+	return TYPEMERGEDMASK(vfsgnjn_vv)(INT2MASK(hidx), x, x, x, 2*VL);
 }
 #else
 static inline V VCONJ(const V x)
@@ -170,7 +170,7 @@ static inline V VBYI(V x)
   return x;
 }
 
-#if 1
+#if 0
 static inline V VZMUL(V tx, V sr)
 {
     V tr = VDUPL(tx);
@@ -207,7 +207,6 @@ static inline V VZMULIJ(V tx, V sr)
     return VFMA(tr, sr, ti);
 }
 #else
-/* broken by INT2MASK ? */
 static inline V VZMUL(V tx, V sr) // fixme: improve
 {
   V tr;
@@ -217,14 +216,14 @@ static inline V VZMUL(V tx, V sr) // fixme: improve
   //Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
   Vint hidx;
 	
-  hidx = TYPEINT(vand_vv)(idx, DS(-1ull,-1), 2*VL); // (0, 0, 2, 2, ...)
+  hidx = TYPEINT(vand_vx)(idx, DS(-2ull,-2), 2*VL); // (0, 0, 2, 2, ...)
   tr = TYPE(vrgather_vv)(tx, hidx, 2*VL); // Real, Real of tx
   hidx = TYPEINT(vor_vx)(idx, 1, 2*VL); // (1, 1, 3, 3, ...)  // could be hidx + vone, ...
   ti = TYPE(vrgather_vv)(tx, hidx, 2*VL); // Imag, Imag of tx
   tr = TYPE(vfmul_vv)(sr,tr,2*VL); // (Real, Real)[tx] * (Real,Imag)[sr]
   hidx = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, 0, 1)
   //sr = TYPEMASK(vfsgnjn)(sr, sr, sr, INT2MASK(hidx), 2*VL); // conjugate of sr
-  sr = TYPEMASK(vfsgnjn_vv)(INT2MASK(hidx), sr, sr, 2*VL); // conjugate of sr
+  sr = TYPEMERGEDMASK(vfsgnjn_vv)(INT2MASK(hidx), sr, sr, sr, 2*VL); // conjugate of sr
   hidx = TYPEINT(vxor_vx)(idx, 1, 2*VL); // (1, 0, 3, 2, ...)
   sr = TYPE(vrgather_vv)(sr, hidx, 2*VL); // Imag, Real of (conjugate of) sr
   return TYPE(vfmacc_vv)(tr,ti,sr,2*VL); // (-Imag, Real)[sr] * (Imag, Imag)[tx] + (Real, Real)[tx] * (Real,Imag)[sr]
@@ -282,7 +281,7 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
   Vint idx2 = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
   Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
   hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
-  return __riscv_vloxei32_v_f32m1(x, hidx, 2*VL);
+  return __riscv_vluxei32_v_f32m1(x, hidx, 2*VL);
 }
 
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
@@ -298,7 +297,7 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
   hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ovs, 2*VL);
   Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
   hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
-  __riscv_vsoxei32_v_f32m1(x, hidx, v, 2*VL);
+  __riscv_vsuxei32_v_f32m1(x, hidx, v, 2*VL);
 }
 
 #else /* !FFTW_SINGLE */
@@ -313,7 +312,7 @@ static inline V LDu(const R *x, INT ivs, const R *aligned_like)
   Vint idx2 = TYPEINT(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
   Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
   hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
-  return __riscv_vloxei64_v_f64m1(x, hidx, 2*VL);
+  return __riscv_vluxei64_v_f64m1(x, hidx, 2*VL);
 }
 
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
@@ -329,7 +328,7 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
   hidx = TYPEINT(vmul_vx)(hidx, sizeof(R)*ovs, 2*VL);
   Vint hidx2 = TYPEINT(vmul_vx)(idx2, sizeof(R), 2*VL);
   hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
-  __riscv_vsoxei64_v_f64m1(x, hidx, v, 2*VL);
+  __riscv_vsuxei64_v_f64m1(x, hidx, v, 2*VL);
 }
 
 #endif /* FFTW_SINGLE */
@@ -345,24 +344,40 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
+#if 0
   Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
   Vint hidx = TYPEINT(vmul_vx)(idx, sizeof(R)*ovs, 2*VL);
-  __riscv_vsoxei32_v_f32m1(x, hidx, v, 2*VL);
+  __riscv_vsuxei32_v_f32m1(x, hidx, v, 2*VL);
+#else
+  __riscv_vsse32_v_f32m1(x, sizeof(R)*ovs, v, 2*VL);
+#endif
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
 #else /* !FFTW_SINGLE */
 #define STM2(x, v, ovs, a) ST(x, v, ovs, a)
 #define STN2(x, v0, v1, ovs) /* nop */
 
+#if 0
 static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
   (void)aligned_like; /* UNUSED */
+#if 0
   Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
   Vint hidx = TYPEINT(vmul_vx)(idx, sizeof(R)*ovs, 2*VL);
-  __riscv_vsoxei64_v_f64m1(x, hidx, v, 2*VL);
+  __riscv_vsuxei64_v_f64m1(x, hidx, v, 2*VL);
+#else
+  __riscv_vsse64_v_f64m1(x, sizeof(R)*ovs, v, 2*VL);
+#endif
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
+#else
+#define STM4(x,v,ovs,aligned_like) /* no-op */
+static inline void STN4(R *x, V v0, V v1, V v2, V v3, INT ovs) {
+  vfloat64m1x4_t v = __riscv_vcreate_v_f64m1x4(v0, v1, v2, v3);
+  __riscv_vssseg4e64_v_f64m1x4(x, ovs*sizeof(R), v, VL*2);
+}
+#endif
 #endif /* FFTW_SINGLE */
 
 /* twiddle storage #1: compact, slower */
