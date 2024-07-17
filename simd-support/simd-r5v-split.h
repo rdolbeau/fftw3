@@ -30,16 +30,24 @@
 
 #ifdef FFTW_SINGLE
 #  define DS(d,s) s /* single-precision option */
-#  define TYPE(name) __builtin_epi_ ## name ## _2xf32
-#  define TYPE2(name) __builtin_epi_ ## name ## _2xf32x2
-#  define TYPEINT(name) __builtin_epi_ ## name ## _2xi32
-#  define TYPEMASK(name) __builtin_epi_ ## name ## _2xf32_mask
+#  define TYPE(name) __riscv_ ## name ## _f32m1
+#  define TYPE2(name) __riscv_ ## name ## _f32m1x2
+#  define TYPEGET(name) __riscv_ ## name ## _f32m1x2_f32m1
+#  define TYPESET(name) __riscv_ ## name ## _f32m1_f32m1x2
+#  define TYPEINT(name) __riscv_ ## name ## _u32m1
+#  define TYPEMASK(name) __riscv_ ## name ## _f32m1_m
+#  define TYPEINTERPRETF2U(name) __riscv_ ## name ## _f32m1_u32m1
+#  define TYPEINTERPRETU2F(name) __riscv_ ## name ## _u32m1_f32m1
 #else /* !FFTW_SINGLE */
 #  define DS(d,s) d /* double-precision option */
-#  define TYPE(name) __builtin_epi_ ## name ## _1xf64
-#  define TYPE2(name) __builtin_epi_ ## name ## _1xf64x2
-#  define TYPEINT(name) __builtin_epi_ ## name ## _1xi64
-#  define TYPEMASK(name) __builtin_epi_ ## name ## _1xf64_mask
+#  define TYPE(name) __riscv_ ## name ## _f64m1
+#  define TYPE2(name) __riscv_ ## name ## _f64m1x2
+#  define TYPEGET(name) __riscv_ ## name ## _f64m1x2_f64m1
+#  define TYPESET(name) __riscv_ ## name ## _f64m1_f64m1x2
+#  define TYPEINT(name) __riscv_ ## name ## _u64m1
+#  define TYPEMASK(name) __riscv_ ## name ## _f64m1_m
+#  define TYPEINTERPRETF2U(name) __riscv_ ## name ## _f64m1_u64m1
+#  define TYPEINTERPRETU2F(name) __riscv_ ## name ## _u64m1_f64m1
 #endif /* FFTW_SINGLE */
 
 /* FIXME: this hardwire to 512 bits */
@@ -66,60 +74,65 @@
 #define SIMD_VSTRIDE_OKA(x) ((x) == 2) 
 #define SIMD_STRIDE_OKPAIR SIMD_STRIDE_OK
 
-//#if defined(__GNUC__) && !defined(???) /* sanity check */
-//#error "compiling simd-r5v.h without RISC-V V support"
-//#endif
+#if defined(__GNUC__) && !defined(__riscv_vector) /* sanity check */
+#error "compiling simd-r5v.h without RISC-V V support"
+#endif
 
-typedef DS(__epi_1xf64x2, __epi_2x32x2) V;
-typedef DS(__epi_1xi64, __epi_2xi32) Vint;
-typedef DS(__epi_1xi1, __epi_2xi1) Vmask;
-#define INT2MASK(mask) DS(TYPEINT(cast_1xi1),TYPEINT(cast_2xi1))(mask)
+#include <riscv_vector.h>
 
+typedef DS(vfloat64m1x2_t, vfloat32m1x2_t) V;
+typedef DS(vfloat64m1_t, vfloat32m1_t) HALFV;
+typedef DS(vuint64m1_t, vuint32m1_t) Vint;
+typedef DS(vbool64_t, vbool32_t) Vmask;
+
+/*
 static inline V VLIT(const R re, const R im) {
   V v;
   v.v0 = TYPE(vfmv_v_f)(re, VL);
   v.v1 = TYPE(vfmv_v_f)(im, VL);
   return v;
 }
-
+*/
+				 
 static inline V VLIT1(const R val) {
-  V v;
-  v.v0 = TYPE(vfmv_v_f)(val, VL);
-  v.v1 = v.v0;
+  HALFV v0 = TYPE(vfmv_v_f)(val, VL);
+  V v = TYPE2(vcreate_v)(v0, v0);
   return v;
 }
 
 #define LDK(x) x
 #define DVK(var, val) V var = VLIT1(val)
-#define VZERO VLIT1(DS(0.,0.f))
-#define VRONE VLIT(DS(1.,1.f),DS(0.,0.f))
-#define VCI VLIT(DS(0.,0.f),DS(1.,1.f))
-#define VCONEMI VLIT(DS(1.,1.f),DS(-1.,-1.f))
-#define VONE  VLIT1(DS(1.,1.f))
-#define VMINUSONE VLIT1(DS(-1.,-1.f))
+//#define VZERO VLIT1(DS(0.,0.f))
+//#define VRONE VLIT(DS(1.,1.f),DS(0.,0.f))
+//#define VCI VLIT(DS(0.,0.f),DS(1.,1.f))
+//#define VCONEMI VLIT(DS(1.,1.f),DS(-1.,-1.f))
+//#define VONE  VLIT1(DS(1.,1.f))
+//#define VMINUSONE VLIT1(DS(-1.,-1.f))
 
 static inline V VDUPL(const V x) {
-	V v = x;
-	v.v1 = v.v0;
+	HALFV v0 = TYPEGET(vget_v)(x, 0);
+	//HALFV v1 = TYPEGET(vget_v)(x, 1);
+	V v = TYPE2(vcreate_v)(v0, v0);
 	return v;
 }
 static inline V VDUPH(const V x) {
-	V v = x;
-        v.v0 = v.v1;
-        return v;
+	//HALFV v0 = TYPEGET(vget_v)(x, 0);
+	HALFV v1 = TYPEGET(vget_v)(x, 1);
+	V v = TYPE2(vcreate_v)(v1, v1);
+	return v;
 }
 
 static inline V FLIP_RI(const V x) {
-	V v;
-	v.v0 = x.v1;
-	v.v1 = x.v0;
+	HALFV v0 = TYPEGET(vget_v)(x, 0);
+	HALFV v1 = TYPEGET(vget_v)(x, 1);
+	V v = TYPE2(vcreate_v)(v1, v0);
 	return v;
 }
 
 static inline V VCONJ(const V x) {
-	V v;
-	v.v0 = x.v0;
-	v.v1 = TYPE(vfsgnjn)(x.v1, x.v1, VL);
+	HALFV v0 = TYPEGET(vget_v)(x, 0);
+	HALFV v1 = TYPEGET(vget_v)(x, 1);
+	V v = TYPE2(vcreate_v)(v0, TYPE(vfneg_v)(v1, VL));
 	return v;
 }
 
@@ -132,41 +145,47 @@ static inline V VBYI(const V x)
 }
 
 static inline V VNEG(const V x) {
-	V v;
-	v.v0 = TYPE(vfsgnjn)(x.v0, x.v0, VL);
-	v.v1 = TYPE(vfsgnjn)(x.v1, x.v1, VL);
+	HALFV v0 = TYPEGET(vget_v)(x, 0);
+	HALFV v1 = TYPEGET(vget_v)(x, 1);
+	V v = TYPE2(vcreate_v)(TYPE(vfneg_v)(v0, VL), TYPE(vfneg_v)(v1, VL));
 	return v;
 }
 
-#define BINOP(X,x) \
-static inline V X(const V a, const V b) {\
-        V v;\
-        v.v0 = TYPE(x)(a.v0, b.v0, VL);\
-        v.v1 = TYPE(x)(a.v1, b.v1, VL);\
-        return v;\
-}
+#define BINOP(X,x)							\
+  static inline V X(const V a, const V b) {				\
+    HALFV av0 = TYPEGET(vget_v)(a, 0);					\
+    HALFV av1 = TYPEGET(vget_v)(a, 1);					\
+    HALFV bv0 = TYPEGET(vget_v)(b, 0);					\
+    HALFV bv1 = TYPEGET(vget_v)(b, 1);					\
+    V v = TYPE2(vcreate_v)(TYPE(x)(av0, bv0, VL), TYPE(x)(av1, bv1, VL)); \
+    return v;								\
+  }
 
-BINOP(VADD,vfadd)
-BINOP(VSUB,vfsub)
-BINOP(VMUL,vfmul)
+BINOP(VADD,vfadd_vv)
+BINOP(VSUB,vfsub_vv)
+BINOP(VMUL,vfmul_vv)
 
 #define TERNOP(X,x) \
-static inline V X(const V a, const V b, const V c) {\
-	V v;\
-	v.v0 = TYPE(x)(c.v0, a.v0, b.v0, VL);\
-	v.v1 = TYPE(x)(c.v1, a.v1, b.v1, VL);\
-	return v;\
+  static inline V X(const V a, const V b, const V c) {			\
+    HALFV av0 = TYPEGET(vget_v)(a, 0);					\
+    HALFV av1 = TYPEGET(vget_v)(a, 1);					\
+    HALFV bv0 = TYPEGET(vget_v)(b, 0);					\
+    HALFV bv1 = TYPEGET(vget_v)(b, 1);					\
+    HALFV cv0 = TYPEGET(vget_v)(c, 0);					\
+    HALFV cv1 = TYPEGET(vget_v)(c, 1);					\
+    V v = TYPE2(vcreate_v)(TYPE(x)(cv0, av0, bv0, VL), TYPE(x)(cv1, av1, bv1, VL)); \
+    return v;								\
 }
 
-TERNOP(VFMA,vfmacc) // or vfmadd
-TERNOP(VFMS,vfmsac)
-TERNOP(VFNMS,vfnmsac)
+TERNOP(VFMA,vfmacc_vv) // or vfmadd
+TERNOP(VFMS,vfmsac_vv)
+TERNOP(VFNMS,vfnmsac_vv)
 
 #define VFMAI(b, c) VADD(c, VBYI(b)) // fixme: improve
 #define VFNMSI(b, c) VSUB(c, VBYI(b)) // fixme: improve
 #define VFMACONJ(b,c)  VADD(VCONJ(b),c) // fixme: improve
-#define VFMSCONJ(b,c)  VFMACONJ(b,VNEG(c)) // fixme: improve
-#define VFNMSCONJ(b,c) VNEG(VFMSCONJ(b,c)) // fixme: improve
+#define VFMSCONJ(b,c)  VSUB(VCONJ(b),c) // fixme: improve
+#define VFNMSCONJ(b,c) VSUB(c, VCONJ(b)) // fixme: improve
 
 static inline V VZMUL(V tx, V sr)
 {
@@ -207,13 +226,14 @@ static inline V VZMULIJ(V tx, V sr) // fixme: improve
 static inline V LDA(const R *x, INT ivs, const R *aligned_like) {
   (void)aligned_like; /* UNUSED */
   (void)ivs; /* UNUSED */
-  V v;
 /* can be done with Zvlsseg instead */
 #if 0
-  v.v0 = TYPE(vload_strided)(x, 2*sizeof(R), VL);
-  v.v1 = TYPE(vload_strided)(x+1, 2*sizeof(R), VL);
+  HALFV v0 = TYPE(vlse64_v)(x, 2*sizeof(R), VL);
+  HALFV v1 = TYPE(vlse64_v)(x+1, 2*sizeof(R), VL);
+  V v = TYPE2(vcreate_v)(v0, v1);
 #else
-  v = TYPE2(vlseg2)(x, VL);
+  V v;
+  v = TYPE2(vlseg2e64_v)(x, VL); // FIXME F32
 #endif
   return v;
 }
@@ -222,10 +242,12 @@ static inline void STA(R *x, const V v, INT ovs, const R *aligned_like) {
   (void)ovs; /* UNUSED */
 /* can be done with Zvlsseg instead */
 #if 0
-  TYPE(vstore_strided)(x, v.v0, 2*sizeof(R), VL);
-  TYPE(vstore_strided)(x+1, v.v1, 2*sizeof(R), VL);
+  HALFV v0 = TYPEGET(vget_v)(v, 0);
+  HALFV v1 = TYPEGET(vget_v)(v, 1);
+  TYPE(vsse64_v)(x, 2*sizeof(R), v0, VL);
+  TYPE(vsse64_v)(x+1, 2*sizeof(R), v1, VL);
 #else
-  TYPE2(vsseg2)(x, v, VL);
+  TYPE2(vsseg2e64_v)(x, v, VL); // FIXME F32
 #endif
 }
 
@@ -236,14 +258,14 @@ static inline void STA(R *x, const V v, INT ovs, const R *aligned_like) {
 static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
+  Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
   Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ivs, 2*VL), 2*VL);
-  Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
-  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
-  hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
-  return TYPE(vload_indexed)(x, hidx, 2*VL);
+  Vint hidx = TYPEINT(vsrl_vv)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
+  hidx = TYPEINT(vmul_vv)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ivs, 2*VL), 2*VL);
+  Vint idx2 = TYPEINT(vand_vv)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
+  Vint hidx2 = TYPEINT(vmul_vv)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
+  hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
+  return __riscv_vloxei32_v_f32m1(x, hidx, 2*VL);
 }
 
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
@@ -259,7 +281,7 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
   hidx = TYPEINT(vmul)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
   Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
   hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
-  TYPE(vstore_indexed)(x, v, hidx, 2*VL);
+  __riscv_vsoxei32_v_f32m1(x, v, hidx, 2*VL);
 }
 
 #else /* !FFTW_SINGLE */
@@ -267,17 +289,27 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  V v;
-  v.v0 = TYPE(vload_strided)(x, ivs*sizeof(R), VL);
-  v.v1 = TYPE(vload_strided)(x+1, ivs*sizeof(R), VL);
+#if 0
+  HALFV v0 = TYPE(vlse64_v)(x, ivs*sizeof(R), VL);
+  HALFV v1 = TYPE(vlse64_v)(x+1, ivs*sizeof(R), VL);
+  V v = TYPE2(vcreate_v)(v0, v1);
+#else
+  V v = TYPE2(vlsseg2e64_v)(x, ivs*sizeof(R), VL);
+#endif
   return v;
 }
 
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  TYPE(vstore_strided)(x, v.v0, ovs*sizeof(R), VL); // fixme: check ovs == 0 ...
-  TYPE(vstore_strided)(x+1, v.v1, ovs*sizeof(R), VL);
+#if 0
+  HALFV v0 = TYPEGET(vget_v)(v, 0);
+  HALFV v1 = TYPEGET(vget_v)(v, 1);
+  TYPE(vsse64_v)(x, ovs*sizeof(R), v0, VL); // fixme: check ovs == 0 ...
+  TYPE(vsse64_v)(x+1, ovs*sizeof(R), v1, VL);
+#else
+  TYPE2(vssseg2e64_v)(x, ovs*sizeof(R), v, VL);
+#endif
 }
 
 #endif /* FFTW_SINGLE */
@@ -293,7 +325,6 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  (void)aligned_like; /* UNUSED */
   Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
   Vint hidx = TYPEINT(vmul)(idx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
   TYPE(vstore_indexed)(x, v, hidx, 2*VL);
@@ -305,9 +336,20 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 
 static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 {
-  TYPE(vstore_strided)(x, v.v0, 2*ovs*sizeof(R), VL); // fixme: check ovs == 0 ...
-  TYPE(vstore_strided)(x+ovs, v.v1, 2*ovs*sizeof(R), VL);
+  (void)aligned_like; /* UNUSED */
+  HALFV v0 = TYPEGET(vget_v)(v, 0);
+  HALFV v1 = TYPEGET(vget_v)(v, 1);
+  TYPE(vsse64_v)(x,       2*ovs*sizeof(R), v0, VL); // fixme: check ovs == 0 ...
+  TYPE(vsse64_v)(x + ovs, 2*ovs*sizeof(R), v1, VL);
+  // 'segment' are dense so this wouldn't work
+  // it would put (re,im) next to each other every ovs*sizeof(R)
+  // it is STu
+  //TYPE2(vssseg2e64_v)(x, ovs*sizeof(R), v, VL);
+  // it could work with a vfloat64m2_t indexed store ?
+  // TYPEM2(vsse64_v)(x, ovs*sizeof(R), v_as_m2, VL * 2);
+  
 }
+// maybe would be better to do STN4 with two 4-wide segment store?
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
 #endif /* FFTW_SINGLE */
 
