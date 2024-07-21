@@ -308,7 +308,7 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
   TYPE(vsse64_v)(x, ovs*sizeof(R), v0, VL); // fixme: check ovs == 0 ...
   TYPE(vsse64_v)(x+1, ovs*sizeof(R), v1, VL);
 #else
-  TYPE2(vssseg2e64_v)(x, ovs*sizeof(R), v, VL);
+  TYPE2(vssseg2e64_v)(x, ovs*sizeof(R), v, ovs? VL : 1);
 #endif
 }
 

@@ -272,7 +272,6 @@ static inline void STA(R *x, V v, INT ovs, const R *aligned_like) {
 }
 
 #if FFTW_SINGLE
-#warning "Should be optimized with strided 64 bits access"
 static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
@@ -324,7 +323,7 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
                                                                            IN    OUT */
   __riscv_vsse64_v_f64m1((double*)x, sizeof(R)*ovs, __riscv_vreinterpret_v_u64m1_f64m1(
                                                     __riscv_vreinterpret_v_u32m1_u64m1(
-                                                    __riscv_vreinterpret_v_f32m1_u32m1(v))), VL);
+						    __riscv_vreinterpret_v_f32m1_u32m1(v))), ovs ? VL : 1);
 #endif
 }
 
@@ -349,14 +348,14 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
   Vint64 idx = TYPEINT64(vid_v)(2*VL); // (0, 1, 2, 3, ...)
   //Vint vone = TYPEINT64(vmv_v_x)(1, 2*VL);
   Vint64 idx2 = TYPEINT64(vand_vx)(idx, 1, 2*VL); // (0, 1, 0, 1, ...)
-  if (ovs==0) { // FIXME: hack for extra_iter hack support
-    v = TYPE(vrgather_vv)(v, idx2, 2*VL);
-  }
+  /* if (ovs==0) { // FIXME: hack for extra_iter hack support */
+  /*   v = TYPE(vrgather_vv)(v, idx2, 2*VL); */
+  /* } */
   Vint64 hidx = TYPEINT64(vsrl_vx)(idx, 1, 2*VL); // (0, 0, 1, 1, ...)
   hidx = TYPEINT64(vmul_vx)(hidx, sizeof(R)*ovs, 2*VL);
   Vint64 hidx2 = TYPEINT64(vmul_vx)(idx2, sizeof(R), 2*VL);
   hidx = TYPEINT64(vadd_vv)(hidx, hidx2, 2*VL);
-  TYPE(vsuxei64_v)(x, hidx, v, 2*VL);
+  TYPE(vsuxei64_v)(x, hidx, v, ovs ? 2*VL : 2);
 }
 
 #endif /* FFTW_SINGLE */
@@ -367,7 +366,7 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 #ifdef FFTW_SINGLE
 #define STM2(x, v, ovs, a) ST(x, v, ovs, a)
 #define STN2(x, v0, v1, ovs) /* nop */
-
+#if 0
 static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
@@ -381,6 +380,13 @@ static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 #endif
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
+#else
+#define STM4(x,v,ovs,aligned_like) /* no-op */
+static inline void STN4(R *x, V v0, V v1, V v2, V v3, INT ovs) {
+  vfloat32m1x4_t v = __riscv_vcreate_v_f32m1x4(v0, v1, v2, v3);
+  __riscv_vssseg4e32_v_f32m1x4(x, ovs*sizeof(R), v, 2*VL);
+}
+#endif
 #else /* !FFTW_SINGLE */
 #define STM2(x, v, ovs, a) ST(x, v, ovs, a)
 #define STN2(x, v0, v1, ovs) /* nop */
