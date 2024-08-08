@@ -233,7 +233,11 @@ static inline V LDA(const R *x, INT ivs, const R *aligned_like) {
   V v = TYPE2(vcreate_v)(v0, v1);
 #else
   V v;
-  v = TYPE2(vlseg2e64_v)(x, VL); // FIXME F32
+#ifdef FFTW_SINGLE
+  v = TYPE2(vlseg2e32_v)(x, VL);
+#else !FFTW_SINGLE
+  v = TYPE2(vlseg2e64_v)(x, VL);
+#endif
 #endif
   return v;
 }
@@ -247,41 +251,27 @@ static inline void STA(R *x, const V v, INT ovs, const R *aligned_like) {
   TYPE(vsse64_v)(x, 2*sizeof(R), v0, VL);
   TYPE(vsse64_v)(x+1, 2*sizeof(R), v1, VL);
 #else
-  TYPE2(vsseg2e64_v)(x, v, VL); // FIXME F32
+#ifdef FFTW_SINGLE
+  TYPE2(vsseg2e32_v)(x, v, VL);
+#else !FFTW_SINGLE
+  TYPE2(vsseg2e64_v)(x, v, VL);
+#endif
 #endif
 }
 
 #if FFTW_SINGLE
-#warning "Should be optimized with strided 64 bits access"
-#error "not implemented yet"
 
 static inline V LDu(const R *x, INT ivs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  Vint idx = TYPEINT(vid_v)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint hidx = TYPEINT(vsrl_vv)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul_vv)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ivs, 2*VL), 2*VL);
-  Vint idx2 = TYPEINT(vand_vv)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
-  Vint hidx2 = TYPEINT(vmul_vv)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
-  hidx = TYPEINT(vadd_vv)(hidx, hidx2, 2*VL);
-  return __riscv_vloxei32_v_f32m1(x, hidx, 2*VL);
+  V v = TYPE2(vlsseg2e32_v)(x, ivs*sizeof(R), VL);
+  return v;
 }
 
 static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint vone = TYPEINT(vmv_v_x)(1, 2*VL);
-  Vint idx2 = TYPEINT(vand)(idx, vone, 2*VL); // (0, 1, 0, 1, ...)
-  if (ovs==0) { // FIXME: hack for extra_iter hack support
-    v = TYPE(vrgather)(v, idx2, 2*VL);
-  }
-  Vint hidx = TYPEINT(vsrl)(idx, vone, 2*VL); // (0, 0, 1, 1, ...)
-  hidx = TYPEINT(vmul)(hidx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
-  Vint hidx2 = TYPEINT(vmul)(idx2, TYPEINT(vmv_v_x)(sizeof(R), 2*VL), 2*VL);
-  hidx = TYPEINT(vadd)(hidx, hidx2, 2*VL);
-  __riscv_vsoxei32_v_f32m1(x, v, hidx, 2*VL);
+  TYPE2(vssseg2e32_v)(x, ovs*sizeof(R), v, ovs? VL : 1);
 }
 
 #else /* !FFTW_SINGLE */
@@ -318,16 +308,16 @@ static inline void STu(R *x, V v, INT ovs, const R *aligned_like)
 #define ST STu
 
 #ifdef FFTW_SINGLE
-#error "not implemented yet"
 #define STM2(x, v, ovs, a) ST(x, v, ovs, a)
 #define STN2(x, v0, v1, ovs) /* nop */
 
 static inline void STM4(R *x, V v, INT ovs, const R *aligned_like)
 {
   (void)aligned_like; /* UNUSED */
-  Vint idx = TYPEINT(vid)(2*VL); // (0, 1, 2, 3, ...)
-  Vint hidx = TYPEINT(vmul)(idx, TYPEINT(vmv_v_x)(sizeof(R)*ovs, 2*VL), 2*VL);
-  TYPE(vstore_indexed)(x, v, hidx, 2*VL);
+  HALFV v0 = TYPEGET(vget_v)(v, 0);
+  HALFV v1 = TYPEGET(vget_v)(v, 1);
+  TYPE(vsse32_v)(x,       2*ovs*sizeof(R), v0, VL); // fixme: check ovs == 0 ...
+  TYPE(vsse32_v)(x + ovs, 2*ovs*sizeof(R), v1, VL);
 }
 #define STN4(x, v0, v1, v2, v3, ovs)  /* no-op */
 #else /* !FFTW_SINGLE */
