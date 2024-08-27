@@ -45,7 +45,7 @@
 #  define TYPEINT(name) __riscv_ ## name ## _u64m1
 #  define TYPEINT64(name) __riscv_ ## name ## _u64m1
 #  define TYPEMASK(name) __riscv_ ## name ## _f64m1_m
-#  define TYPEMERGEDMASK(name) __riscv_ ## name ## _f64m1_tum
+#  define TYPEMERGEDMASK(name) __riscv_ ## name ## _f64m1_mu
 #  define TYPEINTERPRETF2U(name) __riscv_ ## name ## _f64m1_u64m1
 #  define TYPEINTERPRETU2F(name) __riscv_ ## name ## _u64m1_f64m1
 #endif /* FFTW_SINGLE */
